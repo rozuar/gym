@@ -1,0 +1,329 @@
+package repository
+
+import (
+	"database/sql"
+	"time"
+
+	"boxmagic/internal/models"
+)
+
+type ClassRepository struct {
+	db *sql.DB
+}
+
+func NewClassRepository(db *sql.DB) *ClassRepository {
+	return &ClassRepository{db: db}
+}
+
+// Disciplines
+
+func (r *ClassRepository) CreateDiscipline(d *models.Discipline) error {
+	query := `INSERT INTO disciplines (name, description, color, active)
+			  VALUES ($1, $2, $3, $4) RETURNING id, created_at`
+	return r.db.QueryRow(query, d.Name, d.Description, d.Color, true).Scan(&d.ID, &d.CreatedAt)
+}
+
+func (r *ClassRepository) ListDisciplines(activeOnly bool) ([]*models.Discipline, error) {
+	query := `SELECT id, name, description, color, active, created_at FROM disciplines`
+	if activeOnly {
+		query += " WHERE active = true"
+	}
+	query += " ORDER BY name"
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var disciplines []*models.Discipline
+	for rows.Next() {
+		d := &models.Discipline{}
+		if err := rows.Scan(&d.ID, &d.Name, &d.Description, &d.Color, &d.Active, &d.CreatedAt); err != nil {
+			return nil, err
+		}
+		disciplines = append(disciplines, d)
+	}
+	return disciplines, nil
+}
+
+// Classes
+
+func (r *ClassRepository) CreateClass(c *models.Class) error {
+	query := `INSERT INTO classes (discipline_id, name, description, instructor_id, day_of_week, start_time, end_time, capacity, active)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at, updated_at`
+	return r.db.QueryRow(query, c.DisciplineID, c.Name, c.Description, c.InstructorID,
+		c.DayOfWeek, c.StartTime, c.EndTime, c.Capacity, true).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
+}
+
+func (r *ClassRepository) GetClassByID(id int64) (*models.ClassWithDetails, error) {
+	c := &models.ClassWithDetails{}
+	query := `SELECT c.id, c.discipline_id, c.name, c.description, c.instructor_id, c.day_of_week,
+			         c.start_time, c.end_time, c.capacity, c.active, c.created_at, c.updated_at,
+			         d.name, u.name
+			  FROM classes c
+			  JOIN disciplines d ON c.discipline_id = d.id
+			  LEFT JOIN users u ON c.instructor_id = u.id
+			  WHERE c.id = $1`
+
+	err := r.db.QueryRow(query, id).Scan(
+		&c.ID, &c.DisciplineID, &c.Name, &c.Description, &c.InstructorID, &c.DayOfWeek,
+		&c.StartTime, &c.EndTime, &c.Capacity, &c.Active, &c.CreatedAt, &c.UpdatedAt,
+		&c.DisciplineName, &c.InstructorName,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (r *ClassRepository) ListClasses(disciplineID int64, activeOnly bool) ([]*models.ClassWithDetails, error) {
+	query := `SELECT c.id, c.discipline_id, c.name, c.description, c.instructor_id, c.day_of_week,
+			         c.start_time, c.end_time, c.capacity, c.active, c.created_at, c.updated_at,
+			         d.name, u.name
+			  FROM classes c
+			  JOIN disciplines d ON c.discipline_id = d.id
+			  LEFT JOIN users u ON c.instructor_id = u.id
+			  WHERE 1=1`
+
+	args := []interface{}{}
+	argCount := 0
+
+	if disciplineID > 0 {
+		argCount++
+		query += " AND c.discipline_id = $" + string(rune('0'+argCount))
+		args = append(args, disciplineID)
+	}
+	if activeOnly {
+		query += " AND c.active = true"
+	}
+	query += " ORDER BY c.day_of_week, c.start_time"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var classes []*models.ClassWithDetails
+	for rows.Next() {
+		c := &models.ClassWithDetails{}
+		if err := rows.Scan(
+			&c.ID, &c.DisciplineID, &c.Name, &c.Description, &c.InstructorID, &c.DayOfWeek,
+			&c.StartTime, &c.EndTime, &c.Capacity, &c.Active, &c.CreatedAt, &c.UpdatedAt,
+			&c.DisciplineName, &c.InstructorName,
+		); err != nil {
+			return nil, err
+		}
+		classes = append(classes, c)
+	}
+	return classes, nil
+}
+
+func (r *ClassRepository) UpdateClass(c *models.Class) error {
+	query := `UPDATE classes SET name=$1, description=$2, instructor_id=$3, start_time=$4, end_time=$5, capacity=$6, active=$7, updated_at=$8 WHERE id=$9`
+	c.UpdatedAt = time.Now()
+	_, err := r.db.Exec(query, c.Name, c.Description, c.InstructorID, c.StartTime, c.EndTime, c.Capacity, c.Active, c.UpdatedAt, c.ID)
+	return err
+}
+
+func (r *ClassRepository) DeleteClass(id int64) error {
+	_, err := r.db.Exec("DELETE FROM classes WHERE id = $1", id)
+	return err
+}
+
+// Schedules
+
+func (r *ClassRepository) CreateSchedule(s *models.ClassSchedule) error {
+	query := `INSERT INTO class_schedules (class_id, date, capacity, booked, cancelled)
+			  VALUES ($1, $2, $3, 0, false) RETURNING id, created_at`
+	return r.db.QueryRow(query, s.ClassID, s.Date, s.Capacity).Scan(&s.ID, &s.CreatedAt)
+}
+
+func (r *ClassRepository) GetScheduleByID(id int64) (*models.ScheduleWithDetails, error) {
+	s := &models.ScheduleWithDetails{}
+	query := `SELECT cs.id, cs.class_id, cs.date, cs.capacity, cs.booked, cs.cancelled, cs.created_at,
+			         c.name, d.name, c.start_time, c.end_time
+			  FROM class_schedules cs
+			  JOIN classes c ON cs.class_id = c.id
+			  JOIN disciplines d ON c.discipline_id = d.id
+			  WHERE cs.id = $1`
+
+	err := r.db.QueryRow(query, id).Scan(
+		&s.ID, &s.ClassID, &s.Date, &s.Capacity, &s.Booked, &s.Cancelled, &s.CreatedAt,
+		&s.ClassName, &s.DisciplineName, &s.StartTime, &s.EndTime,
+	)
+	if err != nil {
+		return nil, err
+	}
+	s.Available = s.Capacity - s.Booked
+	return s, nil
+}
+
+func (r *ClassRepository) ListSchedules(from, to time.Time) ([]*models.ScheduleWithDetails, error) {
+	query := `SELECT cs.id, cs.class_id, cs.date, cs.capacity, cs.booked, cs.cancelled, cs.created_at,
+			         c.name, d.name, c.start_time, c.end_time
+			  FROM class_schedules cs
+			  JOIN classes c ON cs.class_id = c.id
+			  JOIN disciplines d ON c.discipline_id = d.id
+			  WHERE cs.date >= $1 AND cs.date <= $2 AND cs.cancelled = false
+			  ORDER BY cs.date, c.start_time`
+
+	rows, err := r.db.Query(query, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var schedules []*models.ScheduleWithDetails
+	for rows.Next() {
+		s := &models.ScheduleWithDetails{}
+		if err := rows.Scan(
+			&s.ID, &s.ClassID, &s.Date, &s.Capacity, &s.Booked, &s.Cancelled, &s.CreatedAt,
+			&s.ClassName, &s.DisciplineName, &s.StartTime, &s.EndTime,
+		); err != nil {
+			return nil, err
+		}
+		s.Available = s.Capacity - s.Booked
+		schedules = append(schedules, s)
+	}
+	return schedules, nil
+}
+
+func (r *ClassRepository) GenerateWeekSchedules(startDate time.Time) error {
+	query := `INSERT INTO class_schedules (class_id, date, capacity)
+			  SELECT c.id, $1::date + c.day_of_week, c.capacity
+			  FROM classes c
+			  WHERE c.active = true
+			  AND NOT EXISTS (
+				  SELECT 1 FROM class_schedules cs
+				  WHERE cs.class_id = c.id AND cs.date = $1::date + c.day_of_week
+			  )`
+
+	for i := 0; i < 7; i++ {
+		date := startDate.AddDate(0, 0, i)
+		_, err := r.db.Exec(query, date)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Bookings
+
+func (r *ClassRepository) CreateBooking(b *models.Booking) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Check capacity
+	var booked, capacity int
+	err = tx.QueryRow("SELECT booked, capacity FROM class_schedules WHERE id = $1 FOR UPDATE", b.ClassScheduleID).Scan(&booked, &capacity)
+	if err != nil {
+		return err
+	}
+	if booked >= capacity {
+		return sql.ErrNoRows // No space
+	}
+
+	// Create booking
+	query := `INSERT INTO bookings (user_id, class_schedule_id, subscription_id, status)
+			  VALUES ($1, $2, $3, 'booked') RETURNING id, created_at`
+	err = tx.QueryRow(query, b.UserID, b.ClassScheduleID, b.SubscriptionID).Scan(&b.ID, &b.CreatedAt)
+	if err != nil {
+		return err
+	}
+
+	// Update schedule
+	_, err = tx.Exec("UPDATE class_schedules SET booked = booked + 1 WHERE id = $1", b.ClassScheduleID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *ClassRepository) CancelBooking(bookingID, userID int64) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var scheduleID int64
+	err = tx.QueryRow("UPDATE bookings SET status = 'cancelled' WHERE id = $1 AND user_id = $2 AND status = 'booked' RETURNING class_schedule_id", bookingID, userID).Scan(&scheduleID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE class_schedules SET booked = booked - 1 WHERE id = $1", scheduleID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *ClassRepository) CheckIn(bookingID int64) error {
+	now := time.Now()
+	_, err := r.db.Exec("UPDATE bookings SET status = 'attended', checked_in_at = $1 WHERE id = $2 AND status = 'booked'", now, bookingID)
+	return err
+}
+
+func (r *ClassRepository) ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error) {
+	query := `SELECT b.id, b.user_id, b.class_schedule_id, b.subscription_id, b.status, b.checked_in_at, b.created_at,
+			         c.name, d.name, cs.date, c.start_time
+			  FROM bookings b
+			  JOIN class_schedules cs ON b.class_schedule_id = cs.id
+			  JOIN classes c ON cs.class_id = c.id
+			  JOIN disciplines d ON c.discipline_id = d.id
+			  WHERE b.user_id = $1`
+
+	if upcoming {
+		query += " AND cs.date >= CURRENT_DATE AND b.status = 'booked'"
+	}
+	query += " ORDER BY cs.date DESC, c.start_time DESC LIMIT 50"
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookings []*models.BookingWithDetails
+	for rows.Next() {
+		b := &models.BookingWithDetails{}
+		if err := rows.Scan(
+			&b.ID, &b.UserID, &b.ClassScheduleID, &b.SubscriptionID, &b.Status, &b.CheckedInAt, &b.CreatedAt,
+			&b.ClassName, &b.DisciplineName, &b.ScheduleDate, &b.StartTime,
+		); err != nil {
+			return nil, err
+		}
+		bookings = append(bookings, b)
+	}
+	return bookings, nil
+}
+
+func (r *ClassRepository) GetScheduleBookings(scheduleID int64) ([]*models.Booking, error) {
+	query := `SELECT id, user_id, class_schedule_id, subscription_id, status, checked_in_at, created_at
+			  FROM bookings WHERE class_schedule_id = $1 ORDER BY created_at`
+
+	rows, err := r.db.Query(query, scheduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookings []*models.Booking
+	for rows.Next() {
+		b := &models.Booking{}
+		if err := rows.Scan(&b.ID, &b.UserID, &b.ClassScheduleID, &b.SubscriptionID, &b.Status, &b.CheckedInAt, &b.CreatedAt); err != nil {
+			return nil, err
+		}
+		bookings = append(bookings, b)
+	}
+	return bookings, nil
+}

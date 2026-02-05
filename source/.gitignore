@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+*.out
+
+# Android
+*.apk
+*.aab
+.gradle/
+local.properties
