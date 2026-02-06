@@ -7,6 +7,10 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
+const TEST_PROFILES = [
+  { label: 'Admin', email: 'admin@boxmagic.cl', password: 'admin123' },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
@@ -28,6 +32,12 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fillProfile = (profile: typeof TEST_PROFILES[0]) => {
+    setEmail(profile.email);
+    setPassword(profile.password);
+    setError('');
   };
 
   return (
@@ -63,6 +73,22 @@ export default function LoginPage() {
             Ingresar
           </Button>
         </form>
+
+        <div className="mt-6 pt-4 border-t border-zinc-700">
+          <p className="text-sm text-zinc-500 text-center mb-3">Acceso rápido (dev)</p>
+          <div className="flex gap-2">
+            {TEST_PROFILES.map((profile) => (
+              <button
+                key={profile.email}
+                type="button"
+                onClick={() => fillProfile(profile)}
+                className="flex-1 px-3 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 rounded border border-zinc-600 transition-colors"
+              >
+                {profile.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
     </div>
   );
