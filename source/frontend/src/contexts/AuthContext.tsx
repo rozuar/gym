@@ -4,6 +4,20 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { api } from '@/lib/api';
 import { User } from '@/types';
 
+const SESSION_COOKIE = 'session';
+const ROLE_COOKIE = 'role';
+const SESSION_MAX_AGE = 60 * 60 * 24; // 24h
+
+function setSessionCookies(user: User) {
+  document.cookie = `${SESSION_COOKIE}=1; path=/; max-age=${SESSION_MAX_AGE}; SameSite=Lax`;
+  document.cookie = `${ROLE_COOKIE}=${user.role}; path=/; max-age=${SESSION_MAX_AGE}; SameSite=Lax`;
+}
+
+function clearSessionCookies() {
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
+  document.cookie = `${ROLE_COOKIE}=; path=/; max-age=0`;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -23,10 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       api.setToken(token);
       api.getMe()
-        .then(setUser)
+        .then((u) => {
+          setUser(u);
+          setSessionCookies(u);
+        })
         .catch(() => {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          api.setToken(null);
+          setUser(null);
+          clearSessionCookies();
         })
         .finally(() => setLoading(false));
     } else {
@@ -40,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('refreshToken', response.refresh_token);
     api.setToken(response.access_token);
     setUser(response.user);
+    setSessionCookies(response.user);
   };
 
   const register = async (data: { email: string; password: string; name: string; phone?: string }) => {
@@ -48,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('refreshToken', response.refresh_token);
     api.setToken(response.access_token);
     setUser(response.user);
+    setSessionCookies(response.user);
   };
 
   const logout = () => {
@@ -55,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('refreshToken');
     api.setToken(null);
     setUser(null);
+    clearSessionCookies();
+    window.location.href = '/';
   };
 
   return (

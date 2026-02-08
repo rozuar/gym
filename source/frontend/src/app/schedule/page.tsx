@@ -11,18 +11,31 @@ const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 export default function SchedulePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [booking, setBooking] = useState<number | null>(null);
 
   useEffect(() => {
     loadSchedules();
   }, []);
 
+  const toYMD = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const loadSchedules = async () => {
     try {
-      const data = await api.getSchedules();
+      const from = new Date();
+      const to = new Date();
+      to.setDate(to.getDate() + 14);
+      const data = await api.getSchedules(toYMD(from), toYMD(to));
       setSchedules(data.schedules || []);
+      setLoadError('');
     } catch (err) {
       console.error(err);
+      setLoadError('No se pudieron cargar los horarios. ¿Está el backend en marcha?');
     } finally {
       setLoading(false);
     }
@@ -64,9 +77,15 @@ export default function SchedulePage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Horarios</h1>
 
-      {Object.keys(grouped).length === 0 ? (
+      {loadError ? (
+        <Card>
+          <p className="text-red-400 text-center">{loadError}</p>
+          <p className="text-zinc-500 text-center text-sm mt-2">Backend: {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}</p>
+        </Card>
+      ) : Object.keys(grouped).length === 0 ? (
         <Card>
           <p className="text-zinc-400 text-center">No hay clases programadas</p>
+          <p className="text-zinc-500 text-center text-sm mt-2">Crea datos de prueba desde la página de login (modo dev)</p>
         </Card>
       ) : (
         <div className="space-y-6">

@@ -52,14 +52,19 @@ export default function LoginPage() {
     setError('');
   };
 
-  const handleSeedUsers = async () => {
+  const handleSeedAll = async () => {
     setSeedMessage('');
     setSeedLoading(true);
     try {
-      const res = await api.seedDevUsers();
-      setSeedMessage(res.message || 'Listo. Usa los botones de abajo para rellenar.');
+      const res = await api.seedDevAll();
+      setSeedMessage(res.message || 'Listo. Usa los perfiles de abajo para ingresar.');
     } catch (err: unknown) {
-      setSeedMessage(err instanceof Error ? err.message : 'Error al crear usuarios');
+      const msg = err instanceof Error ? err.message : 'Error al crear datos de prueba';
+      setSeedMessage(
+        msg.includes('403') || msg.includes('Forbidden') || msg.includes('Only available')
+          ? 'Solo disponible en desarrollo. Inicia el backend con API_ENV=development.'
+          : msg
+      );
     } finally {
       setSeedLoading(false);
     }
@@ -100,19 +105,20 @@ export default function LoginPage() {
 
         {isDev && (
           <div className="mt-6 pt-4 border-t border-zinc-700">
-            <p className="text-sm text-zinc-500 text-center mb-3">Desarrollo: usuarios de prueba</p>
+            <p className="text-sm text-zinc-500 text-center mb-3">Desarrollo: datos de prueba</p>
             <Button
               type="button"
               variant="secondary"
               className="w-full mb-3"
               loading={seedLoading}
-              onClick={handleSeedUsers}
+              onClick={handleSeedAll}
             >
-              Crear usuarios de prueba
+              Crear todos los datos de prueba
             </Button>
             {seedMessage && (
               <p className="text-sm text-green-500 text-center mb-2">{seedMessage}</p>
             )}
+            <p className="text-xs text-zinc-500 text-center mb-2">Perfiles para ingresar:</p>
             <div className="flex gap-2">
               {TEST_PROFILES.map((profile) => (
                 <button

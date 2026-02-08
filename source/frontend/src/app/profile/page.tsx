@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
@@ -9,26 +10,34 @@ import { Button } from '@/components/ui/Button';
 import { Subscription } from '@/types';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '' });
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/');
+      return;
+    }
     if (user) {
       setFormData({ name: user.name, phone: user.phone || '' });
     }
     loadSubscription();
-  }, [user]);
+  }, [user, authLoading, router]);
 
   const loadSubscription = async () => {
     try {
       const data = await api.getMySubscription();
       setSubscription(data.subscription);
+      setLoadError('');
     } catch (err) {
       console.error(err);
+      setLoadError('No se pudo cargar la suscripción.');
     } finally {
       setLoading(false);
     }
@@ -47,10 +56,19 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || (!user && loading)) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[50vh] gap-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+        <p className="text-zinc-400">Redirigiendo...</p>
       </div>
     );
   }
@@ -103,7 +121,9 @@ export default function ProfilePage() {
         <Card>
           <h2 className="text-lg font-semibold mb-4">Suscripción</h2>
 
-          {subscription ? (
+          {loadError ? (
+            <p className="text-red-400 text-sm">{loadError}</p>
+          ) : subscription ? (
             <div className="space-y-2 text-zinc-300">
               <p><span className="text-zinc-500">Plan:</span> {subscription.plan_name}</p>
               <p>
@@ -123,14 +143,14 @@ export default function ProfilePage() {
                 </span>
               </div>
             </div>
-          ) : (
+          ) : !loadError ? (
             <div className="text-center py-4">
               <p className="text-zinc-400 mb-4">No tienes suscripción activa</p>
               <Button onClick={() => window.location.href = '/plans'}>
                 Ver Planes
               </Button>
             </div>
-          )}
+          ) : null}
         </Card>
       </div>
     </div>

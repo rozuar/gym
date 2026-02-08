@@ -9,6 +9,7 @@ import { Plan } from '@/types';
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [purchasing, setPurchasing] = useState<number | null>(null);
 
   useEffect(() => {
@@ -19,8 +20,10 @@ export default function PlansPage() {
     try {
       const data = await api.getPlans();
       setPlans((data.plans || []).filter((p: Plan) => p.active));
+      setLoadError('');
     } catch (err) {
       console.error(err);
+      setLoadError('No se pudieron cargar los planes. ¿Está el backend en marcha?');
     } finally {
       setLoading(false);
     }
@@ -61,9 +64,15 @@ export default function PlansPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Planes</h1>
 
-      {plans.length === 0 ? (
+      {loadError ? (
+        <Card>
+          <p className="text-red-400 text-center">{loadError}</p>
+          <p className="text-zinc-500 text-center text-sm mt-2">Backend: {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1'}</p>
+        </Card>
+      ) : plans.length === 0 ? (
         <Card>
           <p className="text-zinc-400 text-center">No hay planes disponibles</p>
+          <p className="text-zinc-500 text-center text-sm mt-2">Crea datos de prueba desde la página de login (modo dev)</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

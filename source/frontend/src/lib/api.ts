@@ -66,6 +66,13 @@ class ApiClient {
     });
   }
 
+  /** Dev only: create all test data (users, plans, disciplines, classes, schedules, routines, subscription) */
+  async seedDevAll() {
+    return this.request<{ message: string; admin: string; user: string }>('/dev/seed-all', {
+      method: 'POST',
+    });
+  }
+
   // User
   async getMe() {
     return this.request<any>('/users/me');

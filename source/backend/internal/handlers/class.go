@@ -200,7 +200,7 @@ func (h *ClassHandler) DeleteClass(w http.ResponseWriter, r *http.Request) {
 
 func (h *ClassHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	from := time.Now().Truncate(24 * time.Hour)
-	to := from.AddDate(0, 0, 7)
+	to := from.AddDate(0, 0, 14)
 
 	if f := r.URL.Query().Get("from"); f != "" {
 		if parsed, err := time.Parse("2006-01-02", f); err == nil {

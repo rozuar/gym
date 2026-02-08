@@ -42,8 +42,9 @@ func main() {
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.Refresh)
 
-	// Dev only: create/reset test users (requires API_ENV=development)
+	// Dev only: seed test data (requires API_ENV=development)
 	mux.HandleFunc("POST /api/v1/dev/seed-users", handlers.SeedTestUsers(db, cfg))
+	mux.HandleFunc("POST /api/v1/dev/seed-all", handlers.SeedAllDevData(db, cfg))
 
 	// Plans (public read, admin write)
 	mux.HandleFunc("GET /api/v1/plans", planHandler.List)

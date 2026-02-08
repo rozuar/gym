@@ -1,19 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Booking } from '@/types';
 
 export default function BookingsPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<number | null>(null);
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    if (!authLoading && !user) {
+      router.replace('/');
+      return;
+    }
+    if (user) {
+      loadBookings();
+    }
+  }, [user, authLoading, router]);
 
   const loadBookings = async () => {
     try {
@@ -59,6 +69,15 @@ export default function BookingsPage() {
       </span>
     );
   };
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[50vh] gap-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+        <p className="text-zinc-400">{!user ? 'Redirigiendo...' : 'Cargando...'}</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
