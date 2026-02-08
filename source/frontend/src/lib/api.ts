@@ -59,6 +59,13 @@ class ApiClient {
     });
   }
 
+  /** Dev only: create/reset test users (backend must have API_ENV=development) */
+  async seedDevUsers() {
+    return this.request<{ message: string; admin: string; user: string }>('/dev/seed-users', {
+      method: 'POST',
+    });
+  }
+
   // User
   async getMe() {
     return this.request<any>('/users/me');

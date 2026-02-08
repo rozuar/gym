@@ -23,6 +23,10 @@ func main() {
 		log.Fatal("Failed to run migrations:", err)
 	}
 
+	if err := repository.Seed(db); err != nil {
+		log.Fatal("Failed to seed database:", err)
+	}
+
 	mux := http.NewServeMux()
 
 	authHandler := handlers.NewAuthHandler(db, cfg)
@@ -37,6 +41,9 @@ func main() {
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.Refresh)
+
+	// Dev only: create/reset test users (requires API_ENV=development)
+	mux.HandleFunc("POST /api/v1/dev/seed-users", handlers.SeedTestUsers(db, cfg))
 
 	// Plans (public read, admin write)
 	mux.HandleFunc("GET /api/v1/plans", planHandler.List)

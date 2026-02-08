@@ -92,6 +92,11 @@ func (r *UserRepository) Delete(id int64) error {
 	return err
 }
 
+func (r *UserRepository) DeleteByEmail(email string) error {
+	_, err := r.db.Exec("DELETE FROM users WHERE email = $1", email)
+	return err
+}
+
 func (r *UserRepository) List(limit, offset int) ([]*models.User, error) {
 	query := `SELECT id, email, password_hash, name, phone, role, active, created_at, updated_at
 			  FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
