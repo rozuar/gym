@@ -48,10 +48,26 @@ src/
 | `/` | Dashboard con estadísticas |
 | `/users` | Gestión de usuarios |
 | `/plans` | CRUD de planes |
-| `/classes` | CRUD de clases |
+| `/classes` | CRUD de clases (asignar instructores) |
 | `/schedules` | Ver/generar horarios |
 | `/routines` | CRUD de rutinas |
 | `/payments` | Historial de pagos |
+
+## Gestión de Instructores
+
+### Asignar Instructores a Clases
+
+En la página de **Clases** (`/classes`), puedes:
+
+1. **Crear clase con instructor**: Al crear una nueva clase, selecciona un instructor de la lista de usuarios.
+2. **Actualizar instructor**: Edita una clase existente para cambiar o asignar un instructor.
+3. **Sin límites**: Un instructor puede tener múltiples clases asignadas sin restricción.
+
+### Notas Importantes
+
+- **Cualquier usuario puede ser instructor**: No hay un rol especial. Selecciona cualquier usuario de la lista.
+- **Instructor opcional**: Las clases pueden existir sin instructor asignado.
+- **Sin validación de horarios**: El sistema no previene automáticamente que un instructor tenga clases superpuestas. Gestiona los horarios manualmente si es necesario.
 
 ## Variables de Entorno
 

@@ -56,6 +56,19 @@ backend/
 - `PUT /api/v1/users/{id}` - Actualizar (admin)
 - `DELETE /api/v1/users/{id}` - Eliminar (admin)
 
+### Classes (protegidos)
+- `GET /api/v1/classes` - Listar clases
+- `GET /api/v1/classes/{id}` - Obtener clase
+- `POST /api/v1/classes` - Crear clase (admin)
+- `PUT /api/v1/classes/{id}` - Actualizar clase (admin)
+- `DELETE /api/v1/classes/{id}` - Eliminar clase (admin)
+
+**Instructores en Clases:**
+- El campo `instructor_id` es opcional y referencia a un usuario del sistema
+- Cualquier usuario puede ser asignado como instructor
+- Un instructor puede tener múltiples clases sin límite
+- No hay validación automática de conflictos de horario
+
 ### Results (protegidos)
 - `POST /api/v1/results` - Registrar resultado de rutina
 - `GET /api/v1/results/me` - Obtener mis resultados
@@ -65,3 +78,35 @@ backend/
 
 ### Health
 - `GET /health` - Health check
+
+## Modelo de Datos - Instructores
+
+### Clases e Instructores
+
+Las clases tienen un campo opcional `instructor_id` que referencia a la tabla `users`:
+
+```sql
+CREATE TABLE classes (
+  ...
+  instructor_id INTEGER REFERENCES users(id),
+  ...
+);
+```
+
+**Características:**
+- `instructor_id` es nullable (opcional)
+- No hay restricciones de unicidad o límites
+- Un usuario puede ser instructor de múltiples clases
+- No hay validación de solapamiento de horarios
+
+**Ejemplo de respuesta:**
+```json
+{
+  "id": 1,
+  "name": "WOD Mañana",
+  "instructor_id": 5,
+  "instructor_name": "Juan Pérez",
+  "discipline_name": "CrossFit",
+  ...
+}
+```

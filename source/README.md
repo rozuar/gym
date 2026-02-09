@@ -108,6 +108,39 @@ Ver guía completa en `context/refined/despliegue-railway.md`
 - `GET /api/v1/users` - Listar usuarios
 - CRUD completo de planes, clases, rutinas
 
+## Instructores/Profesores
+
+### Asignación de Instructores
+
+Los instructores (profesores) se asignan a las clases mediante el campo `instructor_id`:
+
+- **Cualquier usuario del sistema puede ser instructor**: No hay un rol especial de "instructor". Cualquier usuario (incluidos los usuarios regulares) puede ser asignado como instructor de una clase.
+- **Asignación opcional**: El campo `instructor_id` es opcional. Una clase puede existir sin instructor asignado.
+- **Sin límite de clases**: Un instructor puede tener múltiples clases asignadas sin restricción. No hay límite automático en el número de clases que un instructor puede impartir.
+- **Sin validación de horarios**: El sistema no valida automáticamente si un instructor tiene clases superpuestas. Si se requiere evitar conflictos de horario, debe implementarse validación adicional o gestionarse manualmente.
+
+### Gestión de Instructores
+
+- **Crear clase con instructor**: Al crear una clase, se puede especificar `instructor_id` (opcional).
+- **Actualizar instructor**: Se puede cambiar el instructor de una clase existente mediante `PUT /api/v1/classes/{id}`.
+- **Listar clases por instructor**: Las clases incluyen el nombre del instructor en las respuestas cuando está asignado.
+
+### Ejemplo de uso
+
+```json
+// Crear clase con instructor
+POST /api/v1/classes
+{
+  "discipline_id": 1,
+  "name": "WOD Mañana",
+  "instructor_id": 5,  // ID del usuario instructor
+  "day_of_week": 1,
+  "start_time": "09:00",
+  "end_time": "10:00",
+  "capacity": 12
+}
+```
+
 ## Stack Tecnológico
 
 - **Backend**: Go 1.24, PostgreSQL
