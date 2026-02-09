@@ -162,7 +162,6 @@ func Migrate(db *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_class_schedules_date ON class_schedules(date);
 	CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
 	CREATE INDEX IF NOT EXISTS idx_bookings_schedule ON bookings(class_schedule_id);
-	CREATE INDEX IF NOT EXISTS idx_routines_instructor ON routines(instructor_id);
 
 	CREATE TABLE IF NOT EXISTS routines (
 		id SERIAL PRIMARY KEY,
@@ -199,8 +198,32 @@ func Migrate(db *sql.DB) error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_routines_type ON routines(type);
+	CREATE INDEX IF NOT EXISTS idx_routines_instructor ON routines(instructor_id);
 	CREATE INDEX IF NOT EXISTS idx_user_results_user ON user_routine_results(user_id);
 	CREATE INDEX IF NOT EXISTS idx_user_results_routine ON user_routine_results(routine_id);
+
+	-- Migrations for existing databases
+	-- Remove old instructor_id column from classes if it exists
+	DO $$
+	BEGIN
+		IF EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'classes' AND column_name = 'instructor_id'
+		) THEN
+			ALTER TABLE classes DROP COLUMN IF EXISTS instructor_id;
+		END IF;
+	END $$;
+
+	-- Add instructor_id to routines if it doesn't exist
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'routines' AND column_name = 'instructor_id'
+		) THEN
+			ALTER TABLE routines ADD COLUMN instructor_id INTEGER REFERENCES instructors(id);
+		END IF;
+	END $$;
 	`
 
 	_, err := db.Exec(query)
