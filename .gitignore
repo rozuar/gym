@@ -81,8 +81,9 @@ tsconfig.json
 dist/
 build/
 out/
-# Binario del backend Go
+# Binarios del backend Go
 source/backend/api
+source/backend/main
 
 # Node modules fuera de source/
 node_modules/

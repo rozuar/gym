@@ -11,6 +11,9 @@ export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [attendanceForId, setAttendanceForId] = useState<number | null>(null);
+  const [attendanceData, setAttendanceData] = useState<{ schedule: any; bookings: any[] } | null>(null);
+  const [checkingIn, setCheckingIn] = useState<number | null>(null);
 
   useEffect(() => {
     loadSchedules();
@@ -18,7 +21,12 @@ export default function SchedulesPage() {
 
   const loadSchedules = async () => {
     try {
-      const data = await api.getSchedules();
+      const from = new Date();
+      const to = new Date();
+      to.setDate(to.getDate() + 14);
+      const fromStr = from.toISOString().slice(0, 10);
+      const toStr = to.toISOString().slice(0, 10);
+      const data = await api.getSchedules(fromStr, toStr);
       setSchedules(data.schedules || []);
     } finally {
       setLoading(false);
@@ -35,6 +43,37 @@ export default function SchedulesPage() {
       alert('Error al generar horarios');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const openAttendance = async (scheduleId: number) => {
+    if (attendanceForId === scheduleId) {
+      setAttendanceForId(null);
+      setAttendanceData(null);
+      return;
+    }
+    setAttendanceForId(scheduleId);
+    try {
+      const data = await api.getScheduleAttendance(scheduleId);
+      setAttendanceData({ schedule: data.schedule, bookings: data.bookings || [] });
+    } catch (err) {
+      alert('Error al cargar asistencia');
+      setAttendanceForId(null);
+    }
+  };
+
+  const handleCheckIn = async (bookingId: number) => {
+    setCheckingIn(bookingId);
+    try {
+      await api.checkIn(bookingId);
+      if (attendanceForId != null) {
+        const data = await api.getScheduleAttendance(attendanceForId);
+        setAttendanceData({ schedule: data.schedule, bookings: data.bookings || [] });
+      }
+    } catch (err) {
+      alert('Error al hacer check-in');
+    } finally {
+      setCheckingIn(null);
     }
   };
 
@@ -84,14 +123,51 @@ export default function SchedulesPage() {
                           {schedule.start_time} - {schedule.end_time}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center flex-wrap gap-2">
                         <span className="text-sm text-zinc-400">
                           {schedule.booked} / {schedule.capacity} reservados
                         </span>
                         <span className={`text-sm ${schedule.available > 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {schedule.available} disponibles
                         </span>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => openAttendance(schedule.id)}
+                        >
+                          {attendanceForId === schedule.id ? 'Cerrar' : 'Asistencia'}
+                        </Button>
                       </div>
+                      {attendanceForId === schedule.id && attendanceData && (
+                        <div className="mt-3 pt-3 border-t border-zinc-700">
+                          <p className="text-xs text-zinc-500 mb-2">Reservas:</p>
+                          {attendanceData.bookings.length === 0 ? (
+                            <p className="text-sm text-zinc-500">Sin reservas</p>
+                          ) : (
+                            <ul className="space-y-1">
+                              {attendanceData.bookings.map((b: any) => (
+                                <li key={b.id} className="flex justify-between items-center text-sm gap-2">
+                                  <span className="text-zinc-400 truncate">{b.user_name || b.user_id}</span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className={`text-xs px-2 py-0.5 rounded ${b.status === 'attended' ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700'}`}>
+                                      {b.status === 'attended' ? 'Asistió' : b.status}
+                                    </span>
+                                    {b.status === 'booked' && (
+                                      <Button
+                                        size="sm"
+                                        loading={checkingIn === b.id}
+                                        onClick={() => handleCheckIn(b.id)}
+                                      >
+                                        Check-in
+                                      </Button>
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                     </Card>
                   ))}
                 </div>

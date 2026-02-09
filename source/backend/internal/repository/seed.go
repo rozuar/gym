@@ -74,6 +74,29 @@ func Seed(db *sql.DB) error {
 		return err
 	}
 
+	// Get admin user ID for routines
+	var adminID int64
+	err = tx.QueryRow("SELECT id FROM users WHERE email = $1", "admin@boxmagic.cl").Scan(&adminID)
+	if err != nil {
+		return err
+	}
+
+	// Create routines
+	_, err = tx.Exec(`
+		INSERT INTO routines (name, description, type, content, duration, difficulty, created_by, active) VALUES
+		('Fran', '21-15-9', 'wod', 'Thruster 43kg, Pull-ups', 10, 'rx', $1, true),
+		('Cindy', 'AMRAP 20 min', 'wod', '5 Pull-ups, 10 Push-ups, 15 Air Squats', 20, 'intermediate', $1, true),
+		('Helen', '3 rondas', 'wod', '400m run, 21 KB swing 24kg, 12 Pull-ups', 12, 'intermediate', $1, true),
+		('Grace', 'For time', 'wod', '30 Clean & Jerk 43kg', 5, 'rx', $1, true),
+		('Murph', 'For time', 'wod', '1 mile run, 100 Pull-ups, 200 Push-ups, 300 Air Squats, 1 mile run', 45, 'rx', $1, true),
+		('Fuerza A', 'Back Squat', 'strength', '5x5 Back Squat @ 80%', 45, 'intermediate', $1, true),
+		('Skill Work', 'Muscle-up Progression', 'skill', '3 rounds: 5 strict pull-ups, 5 ring dips, 5 muscle-up transitions', 20, 'intermediate', $1, true),
+		('Cardio', 'Running Intervals', 'cardio', '5 rounds: 400m run @ 80%, 2min rest', 25, 'beginner', $1, true)`,
+		adminID)
+	if err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}

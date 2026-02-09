@@ -22,6 +22,9 @@ export function Navbar() {
                 <Link href="/bookings" className="text-zinc-300 hover:text-white px-3 py-2">
                   Mis Reservas
                 </Link>
+                <Link href="/results" className="text-zinc-300 hover:text-white px-3 py-2">
+                  Mis Resultados
+                </Link>
                 <Link href="/plans" className="text-zinc-300 hover:text-white px-3 py-2">
                   Planes
                 </Link>

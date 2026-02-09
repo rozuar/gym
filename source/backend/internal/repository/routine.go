@@ -189,3 +189,33 @@ func (r *RoutineRepository) GetRoutineHistory(routineID int64, userID int64) ([]
 	}
 	return results, nil
 }
+
+func (r *RoutineRepository) GetResultByID(resultID int64) (*models.UserRoutineResult, error) {
+	result := &models.UserRoutineResult{}
+	query := `SELECT id, user_id, routine_id, class_schedule_id, score, notes, rx, created_at
+			  FROM user_routine_results
+			  WHERE id = $1`
+
+	err := r.db.QueryRow(query, resultID).Scan(
+		&result.ID, &result.UserID, &result.RoutineID, &result.ClassScheduleID,
+		&result.Score, &result.Notes, &result.Rx, &result.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (r *RoutineRepository) UpdateResult(resultID int64, userID int64, score string, notes string, rx bool) error {
+	query := `UPDATE user_routine_results
+			  SET score = $1, notes = $2, rx = $3
+			  WHERE id = $4 AND user_id = $5`
+	_, err := r.db.Exec(query, score, notes, rx, resultID, userID)
+	return err
+}
+
+func (r *RoutineRepository) DeleteResult(resultID int64, userID int64) error {
+	query := `DELETE FROM user_routine_results WHERE id = $1 AND user_id = $2`
+	_, err := r.db.Exec(query, resultID, userID)
+	return err
+}

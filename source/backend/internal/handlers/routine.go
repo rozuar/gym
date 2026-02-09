@@ -291,3 +291,83 @@ func (h *RoutineHandler) GetRoutineHistory(w http.ResponseWriter, r *http.Reques
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{"history": results})
 }
+
+func (h *RoutineHandler) UpdateResult(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
+	resultID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid result ID")
+		return
+	}
+
+	// Verify result belongs to user
+	result, err := h.routineRepo.GetResultByID(resultID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "Result not found")
+		return
+	}
+
+	if result.UserID != userID {
+		respondError(w, http.StatusForbidden, "You can only update your own results")
+		return
+	}
+
+	var req models.UpdateResultRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	score := result.Score
+	notes := result.Notes
+	rx := result.Rx
+
+	if req.Score != "" {
+		score = req.Score
+	}
+	if req.Notes != "" {
+		notes = req.Notes
+	}
+	if req.Rx != nil {
+		rx = *req.Rx
+	}
+
+	if err := h.routineRepo.UpdateResult(resultID, userID, score, notes, rx); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update result")
+		return
+	}
+
+	// Fetch updated result
+	updatedResult, _ := h.routineRepo.GetResultByID(resultID)
+	respondJSON(w, http.StatusOK, updatedResult)
+}
+
+func (h *RoutineHandler) DeleteResult(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
+	resultID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid result ID")
+		return
+	}
+
+	// Verify result belongs to user
+	result, err := h.routineRepo.GetResultByID(resultID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "Result not found")
+		return
+	}
+
+	if result.UserID != userID {
+		respondError(w, http.StatusForbidden, "You can only delete your own results")
+		return
+	}
+
+	if err := h.routineRepo.DeleteResult(resultID, userID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to delete result")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

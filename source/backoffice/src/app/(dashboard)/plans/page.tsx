@@ -22,6 +22,9 @@ export default function PlansPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', price: '', duration: '', max_classes: '0' });
+  const [detailPlan, setDetailPlan] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadPlans();
@@ -35,6 +38,19 @@ export default function PlansPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openDetail = async (id: number) => {
+    setDetailPlan(null);
+    setDetailLoading(true);
+    try {
+      const data = await api.getPlan(id);
+      setDetailPlan(data.plan || data);
+    } catch (err) {
+      alert('Error al cargar plan');
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -61,8 +77,23 @@ export default function PlansPage() {
     try {
       await api.updatePlan(plan.id, { active: !plan.active });
       loadPlans();
+      if (detailPlan?.id === plan.id) setDetailPlan((p: any) => p ? { ...p, active: !p.active } : null);
     } catch (err) {
       alert('Error al actualizar plan');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Eliminar este plan?')) return;
+    setDeletingId(id);
+    try {
+      await api.deletePlan(id);
+      setDetailPlan(null);
+      loadPlans();
+    } catch (err) {
+      alert('Error al eliminar plan');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -113,12 +144,40 @@ export default function PlansPage() {
             <p className="text-sm text-zinc-400 mb-4">
               {plan.duration} días • {plan.max_classes === 0 ? 'Clases ilimitadas' : `${plan.max_classes} clases`}
             </p>
-            <Button size="sm" variant="secondary" onClick={() => toggleActive(plan)}>
-              {plan.active ? 'Desactivar' : 'Activar'}
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="secondary" onClick={() => openDetail(plan.id)}>Ver</Button>
+              <Button size="sm" variant="secondary" onClick={() => toggleActive(plan)}>
+                {plan.active ? 'Desactivar' : 'Activar'}
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => handleDelete(plan.id)} loading={deletingId === plan.id}>Eliminar</Button>
+            </div>
           </Card>
         ))}
       </div>
+
+      {detailLoading && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-zinc-800 rounded-lg p-6">Cargando...</div>
+        </div>
+      )}
+      {detailPlan && !detailLoading && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setDetailPlan(null)}>
+          <div className="bg-zinc-800 rounded-lg p-6 max-w-md w-full shadow-xl space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg">Detalle del plan</h3>
+            <p><span className="text-zinc-500">Nombre:</span> {detailPlan.name}</p>
+            <p><span className="text-zinc-500">Precio:</span> {formatCurrency(detailPlan.price ?? 0)}</p>
+            <p><span className="text-zinc-500">Duración:</span> {detailPlan.duration} días</p>
+            <p><span className="text-zinc-500">Máx. clases:</span> {detailPlan.max_classes === 0 ? 'Ilimitadas' : detailPlan.max_classes}</p>
+            <p><span className="text-zinc-500">Descripción:</span> {detailPlan.description || '-'}</p>
+            <p><span className="text-zinc-500">Estado:</span> {detailPlan.active ? 'Activo' : 'Inactivo'}</p>
+            <div className="flex gap-2 pt-4">
+              <Button variant="secondary" onClick={() => toggleActive(detailPlan)}>{detailPlan.active ? 'Desactivar' : 'Activar'}</Button>
+              <Button variant="danger" onClick={() => handleDelete(detailPlan.id)} loading={deletingId === detailPlan.id}>Eliminar</Button>
+              <Button variant="secondary" onClick={() => setDetailPlan(null)}>Cerrar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

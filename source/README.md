@@ -97,6 +97,11 @@ Ver guía completa en `context/refined/despliegue-railway.md`
 - `POST /api/v1/payments` - Realizar pago
 - `POST /api/v1/schedules/{id}/book` - Reservar clase
 - `GET /api/v1/bookings/me` - Mis reservas
+- `POST /api/v1/results` - Registrar resultado de rutina
+- `GET /api/v1/results/me` - Mis resultados
+- `PUT /api/v1/results/{id}` - Actualizar resultado
+- `DELETE /api/v1/results/{id}` - Eliminar resultado
+- `GET /api/v1/routines/{id}/history` - Historial por rutina
 
 ### Admin
 - `GET /api/v1/stats/dashboard` - Dashboard

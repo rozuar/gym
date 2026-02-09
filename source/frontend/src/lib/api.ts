@@ -145,6 +145,11 @@ class ApiClient {
   }
 
   // Routines
+  async getRoutines(type?: string) {
+    const query = type ? `?type=${type}` : '';
+    return this.request<{ routines: any[] }>(`/routines${query}`);
+  }
+
   async getScheduleRoutine(scheduleId: number) {
     return this.request<{ routine: any }>(`/schedules/${scheduleId}/routine`);
   }
@@ -153,11 +158,28 @@ class ApiClient {
     return this.request<{ results: any[] }>('/results/me');
   }
 
-  async logResult(data: { routine_id: number; score: string; notes?: string; rx?: boolean }) {
+  async logResult(data: { routine_id: number; score: string; notes?: string; rx?: boolean; class_schedule_id?: number }) {
     return this.request<any>('/results', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async updateResult(resultId: number, data: { score?: string; notes?: string; rx?: boolean }) {
+    return this.request<any>(`/results/${resultId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteResult(resultId: number) {
+    return this.request<any>(`/results/${resultId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRoutineHistory(routineId: number) {
+    return this.request<{ history: any[] }>(`/routines/${routineId}/history`);
   }
 }
 

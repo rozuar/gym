@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 interface DashboardStats {
   total_users: number;
@@ -20,6 +21,9 @@ interface DashboardStats {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<'users' | 'revenue' | null>(null);
+  const [attendanceStats, setAttendanceStats] = useState<any>(null);
+  const [revenueStats, setRevenueStats] = useState<any>(null);
 
   useEffect(() => {
     api.getDashboard()
@@ -27,6 +31,46 @@ export default function DashboardPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const loadExtraStats = async () => {
+    try {
+      const from = new Date();
+      from.setDate(from.getDate() - 30);
+      const to = new Date();
+      const fromStr = from.toISOString().slice(0, 10);
+      const toStr = to.toISOString().slice(0, 10);
+      const [att, rev] = await Promise.all([
+        api.getAttendanceStats(fromStr, toStr),
+        api.getRevenueStats('monthly'),
+      ]);
+      setAttendanceStats(att);
+      setRevenueStats(rev);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleExportUsers = async () => {
+    setExporting('users');
+    try {
+      await api.exportUsers();
+    } catch (e) {
+      alert('Error al exportar usuarios');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportRevenue = async () => {
+    setExporting('revenue');
+    try {
+      await api.exportRevenue();
+    } catch (e) {
+      alert('Error al exportar ingresos');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(amount);
@@ -75,7 +119,7 @@ export default function DashboardPage() {
       </div>
 
       <h2 className="text-xl font-semibold mb-4">Hoy</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card>
           <p className="text-zinc-500 text-sm">Clases Programadas</p>
           <p className="text-2xl font-bold">{stats?.classes_today || 0}</p>
@@ -89,6 +133,33 @@ export default function DashboardPage() {
           <p className="text-2xl font-bold text-green-500">{stats?.attendance_today || 0}</p>
         </Card>
       </div>
+
+      <h2 className="text-xl font-semibold mb-4">Exportar</h2>
+      <div className="flex gap-2 mb-8">
+        <Button onClick={handleExportUsers} loading={exporting === 'users'} variant="secondary">
+          Exportar usuarios (CSV)
+        </Button>
+        <Button onClick={handleExportRevenue} loading={exporting === 'revenue'} variant="secondary">
+          Exportar ingresos (CSV)
+        </Button>
+      </div>
+
+      <h2 className="text-xl font-semibold mb-4">Estadísticas adicionales</h2>
+      <Button variant="secondary" className="mb-4" onClick={loadExtraStats}>
+        Cargar asistencia e ingresos (últimos 30 días)
+      </Button>
+      {attendanceStats && (
+        <Card className="mb-4">
+          <p className="text-zinc-500 text-sm mb-2">Asistencia por período</p>
+          <pre className="text-sm text-zinc-300 overflow-auto max-h-40">{JSON.stringify(attendanceStats, null, 2)}</pre>
+        </Card>
+      )}
+      {revenueStats && (
+        <Card>
+          <p className="text-zinc-500 text-sm mb-2">Ingresos por período</p>
+          <pre className="text-sm text-zinc-300 overflow-auto max-h-40">{JSON.stringify(revenueStats, null, 2)}</pre>
+        </Card>
+      )}
     </div>
   );
 }

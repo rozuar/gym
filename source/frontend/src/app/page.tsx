@@ -39,7 +39,7 @@ export default function Home() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Hola, {user.name}</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link href="/schedule">
           <Card className="hover:border-blue-500 transition-colors cursor-pointer">
             <h2 className="text-lg font-semibold mb-2">Horarios</h2>
@@ -51,6 +51,13 @@ export default function Home() {
           <Card className="hover:border-blue-500 transition-colors cursor-pointer">
             <h2 className="text-lg font-semibold mb-2">Mis Reservas</h2>
             <p className="text-zinc-400">Ver y gestionar tus reservas</p>
+          </Card>
+        </Link>
+
+        <Link href="/results">
+          <Card className="hover:border-blue-500 transition-colors cursor-pointer">
+            <h2 className="text-lg font-semibold mb-2">Mis Resultados</h2>
+            <p className="text-zinc-400">Ver y registrar resultados de entrenamiento</p>
           </Card>
         </Link>
 

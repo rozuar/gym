@@ -96,6 +96,8 @@ func main() {
 	// Results
 	mux.Handle("POST /api/v1/results", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.LogResult)))
 	mux.Handle("GET /api/v1/results/me", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.MyResults)))
+	mux.Handle("PUT /api/v1/results/{id}", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.UpdateResult)))
+	mux.Handle("DELETE /api/v1/results/{id}", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.DeleteResult)))
 
 	// Users
 	mux.Handle("GET /api/v1/users/me", middleware.Auth(cfg)(http.HandlerFunc(userHandler.GetMe)))

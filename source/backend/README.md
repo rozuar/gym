@@ -56,5 +56,12 @@ backend/
 - `PUT /api/v1/users/{id}` - Actualizar (admin)
 - `DELETE /api/v1/users/{id}` - Eliminar (admin)
 
+### Results (protegidos)
+- `POST /api/v1/results` - Registrar resultado de rutina
+- `GET /api/v1/results/me` - Obtener mis resultados
+- `PUT /api/v1/results/{id}` - Actualizar resultado propio
+- `DELETE /api/v1/results/{id}` - Eliminar resultado propio
+- `GET /api/v1/routines/{id}/history` - Historial de resultados por rutina
+
 ### Health
 - `GET /health` - Health check

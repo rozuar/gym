@@ -158,11 +158,11 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		discs, _ := classRepo.ListDisciplines(false)
 		if len(discs) >= 3 {
 			classesSpec := []struct {
-				discIdx     int
-				name, desc  string
-				day         int
-				start, end  string
-				cap         int
+				discIdx    int
+				name, desc string
+				day        int
+				start, end string
+				cap        int
 			}{
 				{0, "WOD Mañana", "CrossFit AM", 0, "09:00", "10:00", 12},
 				{0, "WOD Tarde", "CrossFit PM", 1, "18:00", "19:00", 12},
@@ -178,14 +178,19 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				}
 				cls := &models.Class{
 					DisciplineID: discs[c.discIdx].ID,
-					Name: c.name, Description: c.desc, InstructorID: &adminID,
+					Name:         c.name, Description: c.desc, InstructorID: &adminID,
 					DayOfWeek: c.day, StartTime: c.start, EndTime: c.end, Capacity: c.cap,
 				}
 				_ = classRepo.CreateClass(cls)
 			}
 		} else if len(discs) > 0 {
 			dID := discs[0].ID
-			for _, c := range []struct{ name, desc string; day int; start, end string; cap int }{
+			for _, c := range []struct {
+				name, desc string
+				day        int
+				start, end string
+				cap        int
+			}{
 				{"WOD Mañana", "CrossFit AM", 0, "09:00", "10:00", 12},
 				{"WOD Tarde", "CrossFit PM", 1, "18:00", "19:00", 12},
 				{"Halterofilia", "Técnica", 2, "10:00", "11:00", 8},
@@ -236,6 +241,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		// 9. Bookings de prueba para el usuario (reservas)
+		todayStart := time.Now().Truncate(24 * time.Hour)
 		if subID != 0 {
 			from := weekStart
 			to := weekStart.AddDate(0, 0, 14)
@@ -245,7 +251,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				if booked >= 4 {
 					break
 				}
-				if schedules[i].Date.Before(time.Now()) {
+				if schedules[i].Date.Before(todayStart) {
 					continue
 				}
 				b := &models.Booking{UserID: userID, ClassScheduleID: schedules[i].ID, SubscriptionID: subID}
@@ -263,6 +269,32 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				break
 			}
 			_ = routineRepo.AssignToSchedule(&models.ScheduleRoutine{ClassScheduleID: s.ID, RoutineID: routineList[i%len(routineList)].ID, Notes: "WOD del día"})
+		}
+
+		// 11. Check-in y resultados: marcar una reserva de hoy como attended y crear user_routine_results
+		var scheduleIDToday int64
+		_ = db.QueryRow(`SELECT cs.id FROM class_schedules cs
+			INNER JOIN bookings b ON b.class_schedule_id = cs.id AND b.user_id = $1 AND b.status = 'booked'
+			WHERE cs.date = $2 LIMIT 1`, userID, todayStart).Scan(&scheduleIDToday)
+		if scheduleIDToday != 0 {
+			_, _ = db.Exec("UPDATE bookings SET status = 'attended', checked_in_at = $1 WHERE user_id = $2 AND class_schedule_id = $3", time.Now(), userID, scheduleIDToday)
+		}
+		var routineIDForSchedule int64
+		_ = db.QueryRow("SELECT routine_id FROM schedule_routines WHERE class_schedule_id = $1 LIMIT 1", scheduleIDToday).Scan(&routineIDForSchedule)
+		if routineIDForSchedule != 0 && scheduleIDToday != 0 {
+			_ = routineRepo.LogResult(&models.UserRoutineResult{UserID: userID, RoutineID: routineIDForSchedule, ClassScheduleID: &scheduleIDToday, Score: "5:30", Notes: "Buen WOD", Rx: true})
+		}
+		added := 0
+		for _, s := range schedules {
+			if s.ID == scheduleIDToday || added >= 2 {
+				continue
+			}
+			var rid int64
+			if db.QueryRow("SELECT routine_id FROM schedule_routines WHERE class_schedule_id = $1 LIMIT 1", s.ID).Scan(&rid) == nil && rid != 0 {
+				sid := s.ID
+				_ = routineRepo.LogResult(&models.UserRoutineResult{UserID: userID, RoutineID: rid, ClassScheduleID: &sid, Score: "8:00", Notes: "Entrenamiento anterior", Rx: false})
+				added++
+			}
 		}
 
 		respondJSON(w, http.StatusOK, map[string]interface{}{

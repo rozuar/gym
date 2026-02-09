@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,13 +10,10 @@ const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export default function SchedulePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [routinesByScheduleId, setRoutinesByScheduleId] = useState<Record<number, { name: string; type?: string; content?: string } | null>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [booking, setBooking] = useState<number | null>(null);
-
-  useEffect(() => {
-    loadSchedules();
-  }, []);
 
   const toYMD = (date: Date) => {
     const y = date.getFullYear();
@@ -25,21 +22,39 @@ export default function SchedulePage() {
     return `${y}-${m}-${d}`;
   };
 
-  const loadSchedules = async () => {
+  const loadRoutinesForSchedules = useCallback((scheduleIds: number[]) => {
+    scheduleIds.slice(0, 20).forEach((id) => {
+      api
+        .getScheduleRoutine(id)
+        .then((res) => setRoutinesByScheduleId((prev) => ({ ...prev, [id]: res.routine || null })))
+        .catch(() => setRoutinesByScheduleId((prev) => ({ ...prev, [id]: null })));
+    });
+  }, []);
+
+  const loadSchedules = useCallback(async () => {
     try {
       const from = new Date();
       const to = new Date();
       to.setDate(to.getDate() + 14);
       const data = await api.getSchedules(toYMD(from), toYMD(to));
-      setSchedules(data.schedules || []);
+      const list = data.schedules || [];
+      setSchedules(list);
       setLoadError('');
+      setRoutinesByScheduleId({});
+      if (list.length > 0) {
+        loadRoutinesForSchedules(list.map((s: Schedule) => s.id));
+      }
     } catch (err) {
       console.error(err);
       setLoadError('No se pudieron cargar los horarios. ¿Está el backend en marcha?');
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadRoutinesForSchedules]);
+
+  useEffect(() => {
+    loadSchedules();
+  }, [loadSchedules]);
 
   const handleBook = async (scheduleId: number) => {
     setBooking(scheduleId);
@@ -100,32 +115,41 @@ export default function SchedulePage() {
                   {dayName} {formatted}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {items.map((schedule) => (
-                    <Card key={schedule.id} className="flex flex-col">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-semibold">{schedule.class_name}</h3>
-                          <p className="text-sm text-zinc-400">{schedule.discipline_name}</p>
+                  {items.map((schedule) => {
+                    const routine = routinesByScheduleId[schedule.id];
+                    return (
+                      <Card key={schedule.id} className="flex flex-col">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-semibold">{schedule.class_name}</h3>
+                            <p className="text-sm text-zinc-400">{schedule.discipline_name}</p>
+                          </div>
+                          <span className="text-sm bg-zinc-700 px-2 py-1 rounded">
+                            {schedule.start_time} - {schedule.end_time}
+                          </span>
                         </div>
-                        <span className="text-sm bg-zinc-700 px-2 py-1 rounded">
-                          {schedule.start_time} - {schedule.end_time}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-auto pt-4">
-                        <span className="text-sm text-zinc-400">
-                          {schedule.available} / {schedule.capacity} disponibles
-                        </span>
-                        <Button
-                          size="sm"
-                          disabled={schedule.available === 0 || booking === schedule.id}
-                          loading={booking === schedule.id}
-                          onClick={() => handleBook(schedule.id)}
-                        >
-                          {schedule.available === 0 ? 'Lleno' : 'Reservar'}
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
+                        {routine && (
+                          <div className="mb-3 p-2 bg-zinc-800/50 rounded text-sm">
+                            <p className="font-medium text-zinc-300">WOD: {routine.name}</p>
+                            {routine.content && <p className="text-zinc-400 mt-0.5">{routine.content}</p>}
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center mt-auto pt-4">
+                          <span className="text-sm text-zinc-400">
+                            {schedule.available} / {schedule.capacity} disponibles
+                          </span>
+                          <Button
+                            size="sm"
+                            disabled={schedule.available === 0 || booking === schedule.id}
+                            loading={booking === schedule.id}
+                            onClick={() => handleBook(schedule.id)}
+                          >
+                            {schedule.available === 0 ? 'Lleno' : 'Reservar'}
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             );

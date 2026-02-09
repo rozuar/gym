@@ -10,7 +10,7 @@ type Routine struct {
 	Description string    `json:"description,omitempty"`
 	Type        string    `json:"type"` // wod, strength, skill, cardio
 	Content     string    `json:"content"`
-	Duration    int       `json:"duration,omitempty"` // minutos
+	Duration    int       `json:"duration,omitempty"`   // minutos
 	Difficulty  string    `json:"difficulty,omitempty"` // beginner, intermediate, advanced, rx
 	CreatedBy   int64     `json:"created_by"`
 	Active      bool      `json:"active"`
@@ -71,6 +71,12 @@ type LogResultRequest struct {
 	Rx              bool   `json:"rx"`
 }
 
+type UpdateResultRequest struct {
+	Score string `json:"score,omitempty"`
+	Notes string `json:"notes,omitempty"`
+	Rx    *bool  `json:"rx,omitempty"`
+}
+
 // Views
 
 type RoutineWithCreator struct {
@@ -87,7 +93,7 @@ type ScheduleRoutineWithDetails struct {
 
 type UserResultWithDetails struct {
 	UserRoutineResult
-	RoutineName string    `json:"routine_name"`
-	RoutineType string    `json:"routine_type"`
+	RoutineName  string     `json:"routine_name"`
+	RoutineType  string     `json:"routine_type"`
 	ScheduleDate *time.Time `json:"schedule_date,omitempty"`
 }

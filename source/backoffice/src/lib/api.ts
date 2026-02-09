@@ -93,6 +93,10 @@ class ApiClient {
     return this.request<any>('/plans');
   }
 
+  async getPlan(id: number) {
+    return this.request<any>(`/plans/${id}`);
+  }
+
   async createPlan(data: any) {
     return this.request<any>('/plans', { method: 'POST', body: JSON.stringify(data) });
   }
@@ -164,6 +168,10 @@ class ApiClient {
     return this.request<any>(`/routines/${id}`, { method: 'PUT', body: JSON.stringify(data) });
   }
 
+  async deleteRoutine(id: number) {
+    return this.request<any>(`/routines/${id}`, { method: 'DELETE' });
+  }
+
   async assignRoutine(scheduleId: number, routineId: number, notes?: string) {
     return this.request<any>(`/schedules/${scheduleId}/routine`, {
       method: 'POST',
@@ -174,6 +182,37 @@ class ApiClient {
   // Payments
   async getPayments(limit = 50, offset = 0) {
     return this.request<any>(`/payments?limit=${limit}&offset=${offset}`);
+  }
+
+  // Export (returns blob, triggers download)
+  private async downloadExport(endpoint: string, filename: string) {
+    const url = `${API_URL.replace(/\/$/, '')}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+    const res = await fetch(url, {
+      headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {},
+    });
+    if (!res.ok) throw new Error('Error al exportar');
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition');
+    const match = disposition?.match(/filename=([^;]+)/);
+    const name = match ? match[1].replace(/"/g, '') : filename;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async exportUsers(status?: string) {
+    await this.downloadExport(`/export/users${status ? `?status=${status}` : ''}`, 'users.csv');
+  }
+
+  async exportRevenue(period?: string) {
+    await this.downloadExport(`/export/revenue${period ? `?period=${period}` : ''}`, 'revenue.csv');
+  }
+
+  async getMonthlyReport(month?: string) {
+    const query = month ? `?month=${month}` : '';
+    return this.request<any>(`/stats/report${query}`);
   }
 }
 

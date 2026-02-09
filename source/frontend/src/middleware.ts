@@ -11,8 +11,7 @@ const PUBLIC_PATHS = ['/', '/login', '/register'];
 const ADMIN_ONLY_PATHS: string[] = [];
 
 function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return true;
-  return pathname === '/login' || pathname === '/register' || pathname.startsWith('/login/') || pathname.startsWith('/register/');
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
 function isAdminOnlyPath(pathname: string): boolean {
@@ -54,5 +53,7 @@ export const config = {
     '/schedule/:path*',
     '/plans',
     '/plans/:path*',
+    '/results',
+    '/results/:path*',
   ],
 };

@@ -27,6 +27,7 @@ src/
 │   ├── register/        # Registro
 │   ├── schedule/        # Horarios y reservas
 │   ├── bookings/        # Mis reservas
+│   ├── results/         # Mis resultados de rutinas
 │   ├── profile/         # Mi perfil
 │   └── plans/           # Planes
 ├── components/
@@ -49,6 +50,7 @@ src/
 | `/register` | Crear cuenta |
 | `/schedule` | Ver horarios y reservar |
 | `/bookings` | Ver y cancelar reservas |
+| `/results` | Ver, registrar, editar y eliminar resultados de rutinas |
 | `/profile` | Perfil y suscripción |
 | `/plans` | Ver y comprar planes |
 
