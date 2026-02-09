@@ -18,7 +18,6 @@ type Class struct {
 	DisciplineID int64     `json:"discipline_id"`
 	Name         string    `json:"name"`
 	Description  string    `json:"description,omitempty"`
-	InstructorID *int64    `json:"instructor_id,omitempty"`
 	DayOfWeek    int       `json:"day_of_week"` // 0=domingo, 1=lunes...
 	StartTime    string    `json:"start_time"`  // HH:MM
 	EndTime      string    `json:"end_time"`    // HH:MM
@@ -57,32 +56,32 @@ type CreateDisciplineRequest struct {
 }
 
 type CreateClassRequest struct {
-	DisciplineID int64  `json:"discipline_id"`
-	Name         string `json:"name"`
-	Description  string `json:"description,omitempty"`
-	InstructorID *int64 `json:"instructor_id,omitempty"`
-	DayOfWeek    int    `json:"day_of_week"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	Capacity     int    `json:"capacity"`
+	DisciplineID  int64   `json:"discipline_id"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description,omitempty"`
+	InstructorIDs []int64 `json:"instructor_ids,omitempty"` // 1-2 instructores
+	DayOfWeek     int     `json:"day_of_week"`
+	StartTime     string  `json:"start_time"`
+	EndTime       string  `json:"end_time"`
+	Capacity      int     `json:"capacity"`
 }
 
 type UpdateClassRequest struct {
-	Name         string `json:"name,omitempty"`
-	Description  string `json:"description,omitempty"`
-	InstructorID *int64 `json:"instructor_id,omitempty"`
-	StartTime    string `json:"start_time,omitempty"`
-	EndTime      string `json:"end_time,omitempty"`
-	Capacity     *int   `json:"capacity,omitempty"`
-	Active       *bool  `json:"active,omitempty"`
+	Name          string  `json:"name,omitempty"`
+	Description   string  `json:"description,omitempty"`
+	InstructorIDs []int64 `json:"instructor_ids,omitempty"` // 1-2 instructores
+	StartTime     string  `json:"start_time,omitempty"`
+	EndTime       string  `json:"end_time,omitempty"`
+	Capacity      *int    `json:"capacity,omitempty"`
+	Active        *bool   `json:"active,omitempty"`
 }
 
 // Views
 
 type ClassWithDetails struct {
 	Class
-	DisciplineName string  `json:"discipline_name"`
-	InstructorName *string `json:"instructor_name,omitempty"`
+	DisciplineName string   `json:"discipline_name"`
+	Instructors    []string `json:"instructors,omitempty"` // Nombres de instructores
 }
 
 type ScheduleWithDetails struct {

@@ -110,34 +110,59 @@ Ver guía completa en `context/refined/despliegue-railway.md`
 
 ## Instructores/Profesores
 
-### Asignación de Instructores
+### Sistema de Instructores
 
-Los instructores (profesores) se asignan a las clases mediante el campo `instructor_id`:
+Los instructores son entidades separadas del sistema, no son usuarios. Se gestionan independientemente y se asignan a clases y rutinas.
 
-- **Cualquier usuario del sistema puede ser instructor**: No hay un rol especial de "instructor". Cualquier usuario (incluidos los usuarios regulares) puede ser asignado como instructor de una clase.
-- **Asignación opcional**: El campo `instructor_id` es opcional. Una clase puede existir sin instructor asignado.
+### Características
+
+- **Entidades separadas**: Los instructores tienen su propia tabla (`instructors`) y CRUD completo.
+- **Asignación a clases**: Una clase puede tener **1 o 2 instructores** asignados (máximo 2).
+- **Asignación a rutinas**: Una rutina puede tener **0 o 1 instructor** asignado (opcional).
 - **Sin límite de clases**: Un instructor puede tener múltiples clases asignadas sin restricción. No hay límite automático en el número de clases que un instructor puede impartir.
-- **Sin validación de horarios**: El sistema no valida automáticamente si un instructor tiene clases superpuestas. Si se requiere evitar conflictos de horario, debe implementarse validación adicional o gestionarse manualmente.
+- **Sin validación de horarios**: El sistema no valida automáticamente si un instructor tiene clases superpuestas. Si se requiere evitar conflictos de horario, debe gestionarse manualmente.
 
 ### Gestión de Instructores
 
-- **Crear clase con instructor**: Al crear una clase, se puede especificar `instructor_id` (opcional).
-- **Actualizar instructor**: Se puede cambiar el instructor de una clase existente mediante `PUT /api/v1/classes/{id}`.
-- **Listar clases por instructor**: Las clases incluyen el nombre del instructor en las respuestas cuando está asignado.
+**Endpoints disponibles (admin):**
+- `GET /api/v1/instructors` - Listar instructores
+- `GET /api/v1/instructors/{id}` - Obtener instructor
+- `POST /api/v1/instructors` - Crear instructor
+- `PUT /api/v1/instructors/{id}` - Actualizar instructor
+- `DELETE /api/v1/instructors/{id}` - Eliminar instructor (soft delete)
 
-### Ejemplo de uso
+### Asignación a Clases
+
+Al crear o actualizar una clase, se puede especificar `instructor_ids` (array de 1-2 IDs):
 
 ```json
-// Crear clase con instructor
+// Crear clase con 1-2 instructores
 POST /api/v1/classes
 {
   "discipline_id": 1,
   "name": "WOD Mañana",
-  "instructor_id": 5,  // ID del usuario instructor
+  "instructor_ids": [1, 2],  // 1 o 2 instructores máximo
   "day_of_week": 1,
   "start_time": "09:00",
   "end_time": "10:00",
   "capacity": 12
+}
+```
+
+### Asignación a Rutinas
+
+Al crear o actualizar una rutina, se puede especificar `instructor_id` (opcional):
+
+```json
+// Crear rutina con instructor opcional
+POST /api/v1/routines
+{
+  "name": "Fran",
+  "type": "wod",
+  "content": "Thruster 43kg, Pull-ups",
+  "instructor_id": 1,  // Opcional, puede ser null
+  "duration": 10,
+  "difficulty": "rx"
 }
 ```
 

@@ -40,14 +40,15 @@ func (h *RoutineHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	routine := &models.Routine{
-		Name:        req.Name,
-		Description: req.Description,
-		Type:        req.Type,
-		Content:     req.Content,
-		Duration:    req.Duration,
-		Difficulty:  req.Difficulty,
-		CreatedBy:   userID,
-		Active:      true,
+		Name:         req.Name,
+		Description:  req.Description,
+		Type:         req.Type,
+		Content:      req.Content,
+		Duration:     req.Duration,
+		Difficulty:   req.Difficulty,
+		InstructorID: req.InstructorID, // Opcional
+		CreatedBy:    userID,
+		Active:       true,
 	}
 
 	if err := h.routineRepo.Create(routine); err != nil {
@@ -142,6 +143,9 @@ func (h *RoutineHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Difficulty != "" {
 		routine.Difficulty = req.Difficulty
+	}
+	if req.InstructorID != nil {
+		routine.InstructorID = req.InstructorID // Opcional, puede ser nil para remover
 	}
 	if req.Active != nil {
 		routine.Active = *req.Active

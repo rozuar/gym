@@ -15,6 +15,10 @@ func NewClassRepository(db *sql.DB) *ClassRepository {
 	return &ClassRepository{db: db}
 }
 
+func (r *ClassRepository) GetDB() *sql.DB {
+	return r.db
+}
+
 // Disciplines
 
 func (r *ClassRepository) CreateDiscipline(d *models.Discipline) error {
@@ -50,40 +54,47 @@ func (r *ClassRepository) ListDisciplines(activeOnly bool) ([]*models.Discipline
 // Classes
 
 func (r *ClassRepository) CreateClass(c *models.Class) error {
-	query := `INSERT INTO classes (discipline_id, name, description, instructor_id, day_of_week, start_time, end_time, capacity, active)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, created_at, updated_at`
-	return r.db.QueryRow(query, c.DisciplineID, c.Name, c.Description, c.InstructorID,
-		c.DayOfWeek, c.StartTime, c.EndTime, c.Capacity, true).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
+	query := `INSERT INTO classes (discipline_id, name, description, day_of_week, start_time, end_time, capacity, active)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id, created_at, updated_at`
+	return r.db.QueryRow(query, c.DisciplineID, c.Name, c.Description,
+		c.DayOfWeek, c.StartTime, c.EndTime, c.Capacity).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 }
 
 func (r *ClassRepository) GetClassByID(id int64) (*models.ClassWithDetails, error) {
 	c := &models.ClassWithDetails{}
-	query := `SELECT c.id, c.discipline_id, c.name, c.description, c.instructor_id, c.day_of_week,
+	query := `SELECT c.id, c.discipline_id, c.name, c.description, c.day_of_week,
 			         c.start_time, c.end_time, c.capacity, c.active, c.created_at, c.updated_at,
-			         d.name, u.name
+			         d.name
 			  FROM classes c
 			  JOIN disciplines d ON c.discipline_id = d.id
-			  LEFT JOIN users u ON c.instructor_id = u.id
 			  WHERE c.id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
-		&c.ID, &c.DisciplineID, &c.Name, &c.Description, &c.InstructorID, &c.DayOfWeek,
+		&c.ID, &c.DisciplineID, &c.Name, &c.Description, &c.DayOfWeek,
 		&c.StartTime, &c.EndTime, &c.Capacity, &c.Active, &c.CreatedAt, &c.UpdatedAt,
-		&c.DisciplineName, &c.InstructorName,
+		&c.DisciplineName,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	// Load instructors
+	instructorRepo := NewInstructorRepository(r.db)
+	instructors, _ := instructorRepo.GetClassInstructors(id)
+	c.Instructors = make([]string, len(instructors))
+	for i, inst := range instructors {
+		c.Instructors[i] = inst.Name
+	}
+
 	return c, nil
 }
 
 func (r *ClassRepository) ListClasses(disciplineID int64, activeOnly bool) ([]*models.ClassWithDetails, error) {
-	query := `SELECT c.id, c.discipline_id, c.name, c.description, c.instructor_id, c.day_of_week,
+	query := `SELECT c.id, c.discipline_id, c.name, c.description, c.day_of_week,
 			         c.start_time, c.end_time, c.capacity, c.active, c.created_at, c.updated_at,
-			         d.name, u.name
+			         d.name
 			  FROM classes c
 			  JOIN disciplines d ON c.discipline_id = d.id
-			  LEFT JOIN users u ON c.instructor_id = u.id
 			  WHERE 1=1`
 
 	args := []interface{}{}
@@ -106,14 +117,21 @@ func (r *ClassRepository) ListClasses(disciplineID int64, activeOnly bool) ([]*m
 	defer rows.Close()
 
 	var classes []*models.ClassWithDetails
+	instructorRepo := NewInstructorRepository(r.db)
 	for rows.Next() {
 		c := &models.ClassWithDetails{}
 		if err := rows.Scan(
-			&c.ID, &c.DisciplineID, &c.Name, &c.Description, &c.InstructorID, &c.DayOfWeek,
+			&c.ID, &c.DisciplineID, &c.Name, &c.Description, &c.DayOfWeek,
 			&c.StartTime, &c.EndTime, &c.Capacity, &c.Active, &c.CreatedAt, &c.UpdatedAt,
-			&c.DisciplineName, &c.InstructorName,
+			&c.DisciplineName,
 		); err != nil {
 			return nil, err
+		}
+		// Load instructors for each class
+		instructors, _ := instructorRepo.GetClassInstructors(c.ID)
+		c.Instructors = make([]string, len(instructors))
+		for i, inst := range instructors {
+			c.Instructors[i] = inst.Name
 		}
 		classes = append(classes, c)
 	}
@@ -121,9 +139,9 @@ func (r *ClassRepository) ListClasses(disciplineID int64, activeOnly bool) ([]*m
 }
 
 func (r *ClassRepository) UpdateClass(c *models.Class) error {
-	query := `UPDATE classes SET name=$1, description=$2, instructor_id=$3, start_time=$4, end_time=$5, capacity=$6, active=$7, updated_at=$8 WHERE id=$9`
+	query := `UPDATE classes SET name=$1, description=$2, start_time=$3, end_time=$4, capacity=$5, active=$6, updated_at=$7 WHERE id=$8`
 	c.UpdatedAt = time.Now()
-	_, err := r.db.Exec(query, c.Name, c.Description, c.InstructorID, c.StartTime, c.EndTime, c.Capacity, c.Active, c.UpdatedAt, c.ID)
+	_, err := r.db.Exec(query, c.Name, c.Description, c.StartTime, c.EndTime, c.Capacity, c.Active, c.UpdatedAt, c.ID)
 	return err
 }
 

@@ -86,6 +86,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		planRepo := repository.NewPlanRepository(db)
 		paymentRepo := repository.NewPaymentRepository(db)
 		routineRepo := repository.NewRoutineRepository(db)
+		instructorRepo := repository.NewInstructorRepository(db)
 
 		// 0. Get test user IDs before deleting (for cleaning their data)
 		var adminID, testUserID int64
@@ -100,9 +101,11 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		_, _ = db.Exec("DELETE FROM schedule_routines")
 		_, _ = db.Exec("DELETE FROM user_routine_results")
 		_, _ = db.Exec("DELETE FROM bookings")
+		_, _ = db.Exec("DELETE FROM class_instructors")
 		_, _ = db.Exec("DELETE FROM class_schedules")
 		_, _ = db.Exec("DELETE FROM classes")
 		_, _ = db.Exec("DELETE FROM routines")
+		_, _ = db.Exec("DELETE FROM instructors")
 		if testUserID != 0 {
 			_, _ = db.Exec("DELETE FROM subscriptions WHERE user_id = $1", testUserID)
 			_, _ = db.Exec("DELETE FROM payments WHERE user_id = $1", testUserID)
@@ -154,8 +157,22 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		adminID = admin.ID
 		userID := user.ID
 
-		// 5. Classes (always create) — varias por disciplina
+		// 5. Instructors (create first)
+		instructors := []*models.Instructor{
+			{Name: "Juan Pérez", Email: "juan@boxmagic.cl", Phone: "+56912345678", Specialty: "CrossFit", Bio: "Instructor certificado CrossFit Level 1"},
+			{Name: "María González", Email: "maria@boxmagic.cl", Phone: "+56987654321", Specialty: "Halterofilia", Bio: "Especialista en levantamiento olímpico"},
+			{Name: "Carlos Rodríguez", Email: "carlos@boxmagic.cl", Phone: "+56911223344", Specialty: "Gimnasia", Bio: "Experto en gimnasia y calistenia"},
+		}
+		var instructorIDs []int64
+		for _, inst := range instructors {
+			if err := instructorRepo.Create(inst); err == nil {
+				instructorIDs = append(instructorIDs, inst.ID)
+			}
+		}
+
+		// 6. Classes (always create) — varias por disciplina
 		discs, _ := classRepo.ListDisciplines(false)
+		var createdClasses []*models.Class
 		if len(discs) >= 3 {
 			classesSpec := []struct {
 				discIdx    int
@@ -163,14 +180,15 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				day        int
 				start, end string
 				cap        int
+				instIdx    int // índice del instructor (0-2)
 			}{
-				{0, "WOD Mañana", "CrossFit AM", 0, "09:00", "10:00", 12},
-				{0, "WOD Tarde", "CrossFit PM", 1, "18:00", "19:00", 12},
-				{0, "Open Box", "Libre CrossFit", 2, "07:00", "09:00", 15},
-				{1, "Halterofilia", "Técnica", 2, "10:00", "11:00", 8},
-				{1, "Fuerza", "Back Squat + Press", 4, "09:00", "10:30", 10},
-				{2, "Gimnasia", "Skill + Muscle-up", 1, "17:00", "18:00", 10},
-				{2, "Mobilidad", "Stretch y core", 3, "12:00", "12:45", 12},
+				{0, "WOD Mañana", "CrossFit AM", 0, "09:00", "10:00", 12, 0},
+				{0, "WOD Tarde", "CrossFit PM", 1, "18:00", "19:00", 12, 0},
+				{0, "Open Box", "Libre CrossFit", 2, "07:00", "09:00", 15, 0},
+				{1, "Halterofilia", "Técnica", 2, "10:00", "11:00", 8, 1},
+				{1, "Fuerza", "Back Squat + Press", 4, "09:00", "10:30", 10, 1},
+				{2, "Gimnasia", "Skill + Muscle-up", 1, "17:00", "18:00", 10, 2},
+				{2, "Mobilidad", "Stretch y core", 3, "12:00", "12:45", 12, 2},
 			}
 			for _, c := range classesSpec {
 				if c.discIdx >= len(discs) {
@@ -178,14 +196,24 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				}
 				cls := &models.Class{
 					DisciplineID: discs[c.discIdx].ID,
-					Name:         c.name, Description: c.desc, InstructorID: &adminID,
-					DayOfWeek: c.day, StartTime: c.start, EndTime: c.end, Capacity: c.cap,
+					Name:         c.name,
+					Description:  c.desc,
+					DayOfWeek:    c.day,
+					StartTime:    c.start,
+					EndTime:      c.end,
+					Capacity:     c.cap,
 				}
-				_ = classRepo.CreateClass(cls)
+				if err := classRepo.CreateClass(cls); err == nil {
+					createdClasses = append(createdClasses, cls)
+					// Assign instructor if available
+					if c.instIdx < len(instructorIDs) {
+						_ = instructorRepo.AssignToClass(cls.ID, []int64{instructorIDs[c.instIdx]})
+					}
+				}
 			}
 		} else if len(discs) > 0 {
 			dID := discs[0].ID
-			for _, c := range []struct {
+			for i, c := range []struct {
 				name, desc string
 				day        int
 				start, end string
@@ -195,12 +223,26 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				{"WOD Tarde", "CrossFit PM", 1, "18:00", "19:00", 12},
 				{"Halterofilia", "Técnica", 2, "10:00", "11:00", 8},
 			} {
-				cls := &models.Class{DisciplineID: dID, Name: c.name, Description: c.desc, InstructorID: &adminID, DayOfWeek: c.day, StartTime: c.start, EndTime: c.end, Capacity: c.cap}
-				_ = classRepo.CreateClass(cls)
+				cls := &models.Class{
+					DisciplineID: dID,
+					Name:         c.name,
+					Description:  c.desc,
+					DayOfWeek:    c.day,
+					StartTime:    c.start,
+					EndTime:      c.end,
+					Capacity:     c.cap,
+				}
+				if err := classRepo.CreateClass(cls); err == nil {
+					createdClasses = append(createdClasses, cls)
+					// Assign instructor if available
+					if i < len(instructorIDs) {
+						_ = instructorRepo.AssignToClass(cls.ID, []int64{instructorIDs[i]})
+					}
+				}
 			}
 		}
 
-		// 6. Schedules for next 2 weeks
+		// 7. Schedules for next 2 weeks
 		weekStart := time.Now()
 		for weekStart.Weekday() != time.Monday {
 			weekStart = weekStart.AddDate(0, 0, -1)
@@ -208,20 +250,26 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		_ = classRepo.GenerateWeekSchedules(weekStart)
 		_ = classRepo.GenerateWeekSchedules(weekStart.AddDate(0, 0, 7))
 
-		// 7. Routines / entrenamientos
-		routines := []*models.Routine{
-			{Name: "Fran", Description: "21-15-9", Type: "wod", Content: "Thruster 43kg, Pull-ups", Duration: 10, Difficulty: "rx", CreatedBy: adminID},
-			{Name: "Cindy", Description: "AMRAP 20 min", Type: "wod", Content: "5 Pull-ups, 10 Push-ups, 15 Air Squats", Duration: 20, Difficulty: "intermediate", CreatedBy: adminID},
-			{Name: "Helen", Description: "3 rondas", Type: "wod", Content: "400m run, 21 KB swing 24kg, 12 Pull-ups", Duration: 12, Difficulty: "intermediate", CreatedBy: adminID},
-			{Name: "Grace", Description: "For time", Type: "wod", Content: "30 Clean & Jerk 43kg", Duration: 5, Difficulty: "rx", CreatedBy: adminID},
-			{Name: "Murph", Description: "For time", Type: "wod", Content: "1 mile run, 100 Pull-ups, 200 Push-ups, 300 Air Squats, 1 mile run", Duration: 45, Difficulty: "rx", CreatedBy: adminID},
-			{Name: "Fuerza A", Description: "Back Squat", Type: "strength", Content: "5x5 Back Squat @ 80%", Duration: 45, Difficulty: "intermediate", CreatedBy: adminID},
+		// 8. Routines / entrenamientos (algunas con instructor, otras sin)
+		routines := []struct {
+			routine *models.Routine
+			instIdx int // índice del instructor (-1 si no tiene)
+		}{
+			{&models.Routine{Name: "Fran", Description: "21-15-9", Type: "wod", Content: "Thruster 43kg, Pull-ups", Duration: 10, Difficulty: "rx", CreatedBy: adminID}, 0},
+			{&models.Routine{Name: "Cindy", Description: "AMRAP 20 min", Type: "wod", Content: "5 Pull-ups, 10 Push-ups, 15 Air Squats", Duration: 20, Difficulty: "intermediate", CreatedBy: adminID}, -1},
+			{&models.Routine{Name: "Helen", Description: "3 rondas", Type: "wod", Content: "400m run, 21 KB swing 24kg, 12 Pull-ups", Duration: 12, Difficulty: "intermediate", CreatedBy: adminID}, 0},
+			{&models.Routine{Name: "Grace", Description: "For time", Type: "wod", Content: "30 Clean & Jerk 43kg", Duration: 5, Difficulty: "rx", CreatedBy: adminID}, 1},
+			{&models.Routine{Name: "Murph", Description: "For time", Type: "wod", Content: "1 mile run, 100 Pull-ups, 200 Push-ups, 300 Air Squats, 1 mile run", Duration: 45, Difficulty: "rx", CreatedBy: adminID}, -1},
+			{&models.Routine{Name: "Fuerza A", Description: "Back Squat", Type: "strength", Content: "5x5 Back Squat @ 80%", Duration: 45, Difficulty: "intermediate", CreatedBy: adminID}, 1},
 		}
 		for _, r := range routines {
-			_ = routineRepo.Create(r)
+			if r.instIdx >= 0 && r.instIdx < len(instructorIDs) {
+				r.routine.InstructorID = &instructorIDs[r.instIdx]
+			}
+			_ = routineRepo.Create(r.routine)
 		}
 
-		// 8. Subscription for test user
+		// 9. Subscription for test user
 		var subID int64
 		plans, _ := planRepo.List(true)
 		if len(plans) > 0 {
@@ -240,7 +288,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			}
 		}
 
-		// 9. Bookings de prueba para el usuario (reservas)
+		// 10. Bookings de prueba para el usuario (reservas)
 		todayStart := time.Now().Truncate(24 * time.Hour)
 		if subID != 0 {
 			from := weekStart
@@ -261,7 +309,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			}
 		}
 
-		// 10. Asignar rutinas a algunos horarios (entrenamiento del día)
+		// 11. Asignar rutinas a algunos horarios (entrenamiento del día)
 		schedules, _ := classRepo.ListSchedules(weekStart, weekStart.AddDate(0, 0, 14))
 		routineList, _ := routineRepo.List("", 10, 0)
 		for i, s := range schedules {
@@ -271,7 +319,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			_ = routineRepo.AssignToSchedule(&models.ScheduleRoutine{ClassScheduleID: s.ID, RoutineID: routineList[i%len(routineList)].ID, Notes: "WOD del día"})
 		}
 
-		// 11. Check-in y resultados: marcar una reserva de hoy como attended y crear user_routine_results
+		// 12. Check-in y resultados: marcar una reserva de hoy como attended y crear user_routine_results
 		var scheduleIDToday int64
 		_ = db.QueryRow(`SELECT cs.id FROM class_schedules cs
 			INNER JOIN bookings b ON b.class_schedule_id = cs.id AND b.user_id = $1 AND b.status = 'booked'

@@ -7,6 +7,59 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// SeedInstructors ensures default instructors exist in the database
+func SeedInstructors(db *sql.DB) error {
+	var instructorCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM instructors").Scan(&instructorCount)
+	if err != nil {
+		return err
+	}
+	if instructorCount > 0 {
+		return nil // Instructors already exist
+	}
+
+	log.Println("No instructors found, seeding default instructors...")
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Create instructors
+	instructors := []struct {
+		name, email, phone, specialty, bio string
+	}{
+		{"Juan Pérez", "juan@boxmagic.cl", "+56912345678", "CrossFit", "Instructor certificado CrossFit Level 1"},
+		{"María González", "maria@boxmagic.cl", "+56987654321", "Halterofilia", "Especialista en levantamiento olímpico"},
+		{"Carlos Rodríguez", "carlos@boxmagic.cl", "+56911223344", "Gimnasia", "Experto en gimnasia y calistenia"},
+	}
+
+	for _, inst := range instructors {
+		var exists int
+		err = tx.QueryRow("SELECT COUNT(*) FROM instructors WHERE name = $1", inst.name).Scan(&exists)
+		if err != nil {
+			continue
+		}
+		if exists == 0 {
+			_, err = tx.Exec(`
+				INSERT INTO instructors (name, email, phone, specialty, bio, active)
+				VALUES ($1, $2, $3, $4, $5, true)`,
+				inst.name, inst.email, inst.phone, inst.specialty, inst.bio)
+			if err != nil {
+				log.Printf("Warning: Failed to insert instructor %s: %v", inst.name, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	log.Println("Default instructors seeded successfully")
+	return nil
+}
+
 // SeedRoutines ensures default routines exist in the database
 func SeedRoutines(db *sql.DB) error {
 	var routineCount int
@@ -88,7 +141,10 @@ func Seed(db *sql.DB) error {
 		return err
 	}
 	if count > 0 {
-		// Users exist, but ensure routines exist
+		// Users exist, but ensure instructors and routines exist
+		if err := SeedInstructors(db); err != nil {
+			log.Printf("Warning: Failed to seed instructors: %v", err)
+		}
 		if err := SeedRoutines(db); err != nil {
 			log.Printf("Warning: Failed to seed routines: %v", err)
 		}
@@ -152,6 +208,16 @@ func Seed(db *sql.DB) error {
 		return err
 	}
 
+	// Create instructors
+	_, err = tx.Exec(`
+		INSERT INTO instructors (name, email, phone, specialty, bio, active) VALUES
+		('Juan Pérez', 'juan@boxmagic.cl', '+56912345678', 'CrossFit', 'Instructor certificado CrossFit Level 1', true),
+		('María González', 'maria@boxmagic.cl', '+56987654321', 'Halterofilia', 'Especialista en levantamiento olímpico', true),
+		('Carlos Rodríguez', 'carlos@boxmagic.cl', '+56911223344', 'Gimnasia', 'Experto en gimnasia y calistenia', true)`)
+	if err != nil {
+		return err
+	}
+
 	// Get admin user ID for routines
 	var adminID int64
 	err = tx.QueryRow("SELECT id FROM users WHERE email = $1", "admin@boxmagic.cl").Scan(&adminID)
@@ -159,7 +225,7 @@ func Seed(db *sql.DB) error {
 		return err
 	}
 
-	// Create routines
+	// Create routines (sin instructor por defecto, se pueden asignar después)
 	_, err = tx.Exec(`
 		INSERT INTO routines (name, description, type, content, duration, difficulty, created_by, active) VALUES
 		('Fran', '21-15-9', 'wod', 'Thruster 43kg, Pull-ups', 10, 'rx', $1, true),

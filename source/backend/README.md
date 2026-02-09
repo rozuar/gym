@@ -56,6 +56,13 @@ backend/
 - `PUT /api/v1/users/{id}` - Actualizar (admin)
 - `DELETE /api/v1/users/{id}` - Eliminar (admin)
 
+### Instructors (admin only)
+- `GET /api/v1/instructors` - Listar instructores
+- `GET /api/v1/instructors/{id}` - Obtener instructor
+- `POST /api/v1/instructors` - Crear instructor
+- `PUT /api/v1/instructors/{id}` - Actualizar instructor
+- `DELETE /api/v1/instructors/{id}` - Eliminar instructor
+
 ### Classes (protegidos)
 - `GET /api/v1/classes` - Listar clases
 - `GET /api/v1/classes/{id}` - Obtener clase
@@ -64,8 +71,8 @@ backend/
 - `DELETE /api/v1/classes/{id}` - Eliminar clase (admin)
 
 **Instructores en Clases:**
-- El campo `instructor_id` es opcional y referencia a un usuario del sistema
-- Cualquier usuario puede ser asignado como instructor
+- Las clases pueden tener 1-2 instructores asignados mediante `instructor_ids` (array)
+- Los instructores son entidades separadas (tabla `instructors`)
 - Un instructor puede tener múltiples clases sin límite
 - No hay validación automática de conflictos de horario
 
@@ -81,32 +88,73 @@ backend/
 
 ## Modelo de Datos - Instructores
 
-### Clases e Instructores
+### Tabla de Instructores
 
-Las clases tienen un campo opcional `instructor_id` que referencia a la tabla `users`:
+Los instructores son entidades separadas con su propia tabla:
 
 ```sql
-CREATE TABLE classes (
-  ...
-  instructor_id INTEGER REFERENCES users(id),
-  ...
+CREATE TABLE instructors (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  specialty VARCHAR(100),
+  bio TEXT,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Relación Clase-Instructores
+
+Las clases pueden tener 1-2 instructores mediante tabla de relación:
+
+```sql
+CREATE TABLE class_instructors (
+  id SERIAL PRIMARY KEY,
+  class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+  instructor_id INTEGER REFERENCES instructors(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(class_id, instructor_id)
 );
 ```
 
 **Características:**
-- `instructor_id` es nullable (opcional)
-- No hay restricciones de unicidad o límites
-- Un usuario puede ser instructor de múltiples clases
+- Una clase puede tener 1-2 instructores (máximo 2)
+- Un instructor puede tener múltiples clases sin límite
 - No hay validación de solapamiento de horarios
 
-**Ejemplo de respuesta:**
+### Relación Rutina-Instructor
+
+Las rutinas pueden tener 0-1 instructor (opcional):
+
+```sql
+CREATE TABLE routines (
+  ...
+  instructor_id INTEGER REFERENCES instructors(id),
+  ...
+);
+```
+
+**Ejemplo de respuesta de clase:**
 ```json
 {
   "id": 1,
   "name": "WOD Mañana",
-  "instructor_id": 5,
-  "instructor_name": "Juan Pérez",
+  "instructors": ["Juan Pérez", "María González"],
   "discipline_name": "CrossFit",
+  ...
+}
+```
+
+**Ejemplo de respuesta de rutina:**
+```json
+{
+  "id": 1,
+  "name": "Fran",
+  "instructor_id": 1,
+  "instructor_name": "Juan Pérez",
   ...
 }
 ```

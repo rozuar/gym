@@ -99,12 +99,23 @@ func Migrate(db *sql.DB) error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
+	CREATE TABLE IF NOT EXISTS instructors (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		email VARCHAR(255),
+		phone VARCHAR(50),
+		specialty VARCHAR(100),
+		bio TEXT,
+		active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
 	CREATE TABLE IF NOT EXISTS classes (
 		id SERIAL PRIMARY KEY,
 		discipline_id INTEGER REFERENCES disciplines(id),
 		name VARCHAR(255) NOT NULL,
 		description TEXT,
-		instructor_id INTEGER REFERENCES users(id),
 		day_of_week INTEGER NOT NULL,
 		start_time VARCHAR(10) NOT NULL,
 		end_time VARCHAR(10) NOT NULL,
@@ -112,6 +123,14 @@ func Migrate(db *sql.DB) error {
 		active BOOLEAN DEFAULT true,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS class_instructors (
+		id SERIAL PRIMARY KEY,
+		class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+		instructor_id INTEGER REFERENCES instructors(id) ON DELETE CASCADE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(class_id, instructor_id)
 	);
 
 	CREATE TABLE IF NOT EXISTS class_schedules (
@@ -136,10 +155,14 @@ func Migrate(db *sql.DB) error {
 		UNIQUE(user_id, class_schedule_id)
 	);
 
+	CREATE INDEX IF NOT EXISTS idx_instructors_active ON instructors(active);
 	CREATE INDEX IF NOT EXISTS idx_classes_discipline ON classes(discipline_id);
+	CREATE INDEX IF NOT EXISTS idx_class_instructors_class ON class_instructors(class_id);
+	CREATE INDEX IF NOT EXISTS idx_class_instructors_instructor ON class_instructors(instructor_id);
 	CREATE INDEX IF NOT EXISTS idx_class_schedules_date ON class_schedules(date);
 	CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
 	CREATE INDEX IF NOT EXISTS idx_bookings_schedule ON bookings(class_schedule_id);
+	CREATE INDEX IF NOT EXISTS idx_routines_instructor ON routines(instructor_id);
 
 	CREATE TABLE IF NOT EXISTS routines (
 		id SERIAL PRIMARY KEY,
@@ -149,6 +172,7 @@ func Migrate(db *sql.DB) error {
 		content TEXT NOT NULL,
 		duration INTEGER,
 		difficulty VARCHAR(50),
+		instructor_id INTEGER REFERENCES instructors(id),
 		created_by INTEGER REFERENCES users(id),
 		active BOOLEAN DEFAULT true,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

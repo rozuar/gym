@@ -35,6 +35,7 @@ func main() {
 	paymentHandler := handlers.NewPaymentHandler(db)
 	classHandler := handlers.NewClassHandler(db)
 	routineHandler := handlers.NewRoutineHandler(db)
+	instructorHandler := handlers.NewInstructorHandler(db)
 	statsHandler := handlers.NewStatsHandler(db)
 
 	// Public routes
@@ -58,6 +59,13 @@ func main() {
 	mux.Handle("GET /api/v1/payments/me", middleware.Auth(cfg)(http.HandlerFunc(paymentHandler.MyPayments)))
 	mux.Handle("GET /api/v1/subscriptions/me", middleware.Auth(cfg)(http.HandlerFunc(paymentHandler.MySubscription)))
 	mux.Handle("GET /api/v1/payments", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(paymentHandler.ListAll))))
+
+	// Instructors (admin only)
+	mux.Handle("GET /api/v1/instructors", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(instructorHandler.List))))
+	mux.Handle("GET /api/v1/instructors/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(instructorHandler.GetByID))))
+	mux.Handle("POST /api/v1/instructors", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(instructorHandler.Create))))
+	mux.Handle("PUT /api/v1/instructors/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(instructorHandler.Update))))
+	mux.Handle("DELETE /api/v1/instructors/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(instructorHandler.Delete))))
 
 	// Disciplines (public read, admin write)
 	mux.HandleFunc("GET /api/v1/disciplines", classHandler.ListDisciplines)

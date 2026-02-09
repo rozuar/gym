@@ -79,11 +79,16 @@ func (h *ClassHandler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate: 1-2 instructors max
+	if len(req.InstructorIDs) > 2 {
+		respondError(w, http.StatusBadRequest, "Maximum 2 instructors per class")
+		return
+	}
+
 	c := &models.Class{
 		DisciplineID: req.DisciplineID,
 		Name:         req.Name,
 		Description:  req.Description,
-		InstructorID: req.InstructorID,
 		DayOfWeek:    req.DayOfWeek,
 		StartTime:    req.StartTime,
 		EndTime:      req.EndTime,
@@ -96,7 +101,22 @@ func (h *ClassHandler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, c)
+	// Assign instructors (1-2)
+	if len(req.InstructorIDs) > 0 {
+		instructorRepo := repository.NewInstructorRepository(h.classRepo.GetDB())
+		if err := instructorRepo.AssignToClass(c.ID, req.InstructorIDs); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to assign instructors")
+			return
+		}
+	}
+
+	// Reload with instructors
+	class, _ := h.classRepo.GetClassByID(c.ID)
+	if class != nil {
+		respondJSON(w, http.StatusCreated, class)
+	} else {
+		respondJSON(w, http.StatusCreated, c)
+	}
 }
 
 func (h *ClassHandler) ListClasses(w http.ResponseWriter, r *http.Request) {
@@ -157,9 +177,6 @@ func (h *ClassHandler) UpdateClass(w http.ResponseWriter, r *http.Request) {
 	if req.Description != "" {
 		class.Description = req.Description
 	}
-	if req.InstructorID != nil {
-		class.InstructorID = req.InstructorID
-	}
 	if req.StartTime != "" {
 		class.StartTime = req.StartTime
 	}
@@ -178,7 +195,27 @@ func (h *ClassHandler) UpdateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, class)
+	// Update instructors if provided
+	if req.InstructorIDs != nil {
+		// Validate: 1-2 instructors max
+		if len(req.InstructorIDs) > 2 {
+			respondError(w, http.StatusBadRequest, "Maximum 2 instructors per class")
+			return
+		}
+		instructorRepo := repository.NewInstructorRepository(h.classRepo.GetDB())
+		if err := instructorRepo.AssignToClass(id, req.InstructorIDs); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to update instructors")
+			return
+		}
+	}
+
+	// Reload with instructors
+	updatedClass, _ := h.classRepo.GetClassByID(id)
+	if updatedClass != nil {
+		respondJSON(w, http.StatusOK, updatedClass)
+	} else {
+		respondJSON(w, http.StatusOK, class)
+	}
 }
 
 func (h *ClassHandler) DeleteClass(w http.ResponseWriter, r *http.Request) {

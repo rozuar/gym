@@ -16,26 +16,27 @@ func NewRoutineRepository(db *sql.DB) *RoutineRepository {
 }
 
 func (r *RoutineRepository) Create(routine *models.Routine) error {
-	query := `INSERT INTO routines (name, description, type, content, duration, difficulty, created_by, active)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+	query := `INSERT INTO routines (name, description, type, content, duration, difficulty, instructor_id, created_by, active)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
 			  RETURNING id, created_at, updated_at`
 	return r.db.QueryRow(query, routine.Name, routine.Description, routine.Type,
-		routine.Content, routine.Duration, routine.Difficulty, routine.CreatedBy).
+		routine.Content, routine.Duration, routine.Difficulty, routine.InstructorID, routine.CreatedBy).
 		Scan(&routine.ID, &routine.CreatedAt, &routine.UpdatedAt)
 }
 
 func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error) {
 	routine := &models.RoutineWithCreator{}
 	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
-			         r.created_by, r.active, r.created_at, r.updated_at, u.name
+			         r.instructor_id, r.created_by, r.active, r.created_at, r.updated_at, u.name, i.name
 			  FROM routines r
 			  JOIN users u ON r.created_by = u.id
+			  LEFT JOIN instructors i ON r.instructor_id = i.id
 			  WHERE r.id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
 		&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
-		&routine.Duration, &routine.Difficulty, &routine.CreatedBy, &routine.Active,
-		&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName,
+		&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
+		&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName,
 	)
 	if err != nil {
 		return nil, err
@@ -45,9 +46,10 @@ func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error
 
 func (r *RoutineRepository) List(routineType string, limit, offset int) ([]*models.RoutineWithCreator, error) {
 	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
-			         r.created_by, r.active, r.created_at, r.updated_at, u.name
+			         r.instructor_id, r.created_by, r.active, r.created_at, r.updated_at, u.name, i.name
 			  FROM routines r
 			  JOIN users u ON r.created_by = u.id
+			  LEFT JOIN instructors i ON r.instructor_id = i.id
 			  WHERE r.active = true`
 
 	args := []interface{}{}
@@ -75,8 +77,8 @@ func (r *RoutineRepository) List(routineType string, limit, offset int) ([]*mode
 		routine := &models.RoutineWithCreator{}
 		if err := rows.Scan(
 			&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
-			&routine.Duration, &routine.Difficulty, &routine.CreatedBy, &routine.Active,
-			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName,
+			&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
+			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName,
 		); err != nil {
 			return nil, err
 		}
@@ -86,10 +88,10 @@ func (r *RoutineRepository) List(routineType string, limit, offset int) ([]*mode
 }
 
 func (r *RoutineRepository) Update(routine *models.Routine) error {
-	query := `UPDATE routines SET name=$1, description=$2, type=$3, content=$4, duration=$5, difficulty=$6, active=$7, updated_at=$8 WHERE id=$9`
+	query := `UPDATE routines SET name=$1, description=$2, type=$3, content=$4, duration=$5, difficulty=$6, instructor_id=$7, active=$8, updated_at=$9 WHERE id=$10`
 	routine.UpdatedAt = time.Now()
 	_, err := r.db.Exec(query, routine.Name, routine.Description, routine.Type, routine.Content,
-		routine.Duration, routine.Difficulty, routine.Active, routine.UpdatedAt, routine.ID)
+		routine.Duration, routine.Difficulty, routine.InstructorID, routine.Active, routine.UpdatedAt, routine.ID)
 	return err
 }
 

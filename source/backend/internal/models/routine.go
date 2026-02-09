@@ -5,17 +5,18 @@ import (
 )
 
 type Routine struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description,omitempty"`
-	Type        string    `json:"type"` // wod, strength, skill, cardio
-	Content     string    `json:"content"`
-	Duration    int       `json:"duration,omitempty"`   // minutos
-	Difficulty  string    `json:"difficulty,omitempty"` // beginner, intermediate, advanced, rx
-	CreatedBy   int64     `json:"created_by"`
-	Active      bool      `json:"active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID           int64     `json:"id"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description,omitempty"`
+	Type         string    `json:"type"` // wod, strength, skill, cardio
+	Content      string    `json:"content"`
+	Duration     int       `json:"duration,omitempty"`   // minutos
+	Difficulty   string    `json:"difficulty,omitempty"` // beginner, intermediate, advanced, rx
+	InstructorID *int64    `json:"instructor_id,omitempty"` // Opcional
+	CreatedBy    int64     `json:"created_by"`
+	Active       bool      `json:"active"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type ScheduleRoutine struct {
@@ -40,22 +41,24 @@ type UserRoutineResult struct {
 // Requests
 
 type CreateRoutineRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Type        string `json:"type"`
-	Content     string `json:"content"`
-	Duration    int    `json:"duration,omitempty"`
-	Difficulty  string `json:"difficulty,omitempty"`
+	Name         string `json:"name"`
+	Description  string `json:"description,omitempty"`
+	Type         string `json:"type"`
+	Content      string `json:"content"`
+	Duration     int    `json:"duration,omitempty"`
+	Difficulty   string `json:"difficulty,omitempty"`
+	InstructorID *int64 `json:"instructor_id,omitempty"` // Opcional
 }
 
 type UpdateRoutineRequest struct {
-	Name        string `json:"name,omitempty"`
-	Description string `json:"description,omitempty"`
-	Type        string `json:"type,omitempty"`
-	Content     string `json:"content,omitempty"`
-	Duration    *int   `json:"duration,omitempty"`
-	Difficulty  string `json:"difficulty,omitempty"`
-	Active      *bool  `json:"active,omitempty"`
+	Name         string `json:"name,omitempty"`
+	Description  string `json:"description,omitempty"`
+	Type         string `json:"type,omitempty"`
+	Content      string `json:"content,omitempty"`
+	Duration     *int   `json:"duration,omitempty"`
+	Difficulty   string `json:"difficulty,omitempty"`
+	InstructorID *int64 `json:"instructor_id,omitempty"` // Opcional
+	Active       *bool  `json:"active,omitempty"`
 }
 
 type AssignRoutineRequest struct {
@@ -81,7 +84,8 @@ type UpdateResultRequest struct {
 
 type RoutineWithCreator struct {
 	Routine
-	CreatorName string `json:"creator_name"`
+	CreatorName    string  `json:"creator_name"`
+	InstructorName *string `json:"instructor_name,omitempty"`
 }
 
 type ScheduleRoutineWithDetails struct {
