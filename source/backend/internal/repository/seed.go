@@ -7,6 +7,80 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// SeedRoutines ensures default routines exist in the database
+func SeedRoutines(db *sql.DB) error {
+	var routineCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM routines").Scan(&routineCount)
+	if err != nil {
+		return err
+	}
+	if routineCount > 0 {
+		return nil // Routines already exist
+	}
+
+	log.Println("No routines found, seeding default routines...")
+
+	// Get or create admin user for routines
+	var adminID int64
+	err = db.QueryRow("SELECT id FROM users WHERE email = $1", "admin@boxmagic.cl").Scan(&adminID)
+	if err != nil {
+		// If admin doesn't exist, try to get any admin user
+		err = db.QueryRow("SELECT id FROM users WHERE role = 'admin' LIMIT 1").Scan(&adminID)
+		if err != nil {
+			// If no admin exists, create a temporary one (or use 0 if allowed)
+			// For now, we'll skip routines if no admin exists
+			log.Println("Warning: No admin user found, skipping routine seed")
+			return nil
+		}
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Create routines (check if each exists before inserting)
+	routines := []struct {
+		name, desc, rtype, content string
+		duration                    int
+		difficulty                  string
+	}{
+		{"Fran", "21-15-9", "wod", "Thruster 43kg, Pull-ups", 10, "rx"},
+		{"Cindy", "AMRAP 20 min", "wod", "5 Pull-ups, 10 Push-ups, 15 Air Squats", 20, "intermediate"},
+		{"Helen", "3 rondas", "wod", "400m run, 21 KB swing 24kg, 12 Pull-ups", 12, "intermediate"},
+		{"Grace", "For time", "wod", "30 Clean & Jerk 43kg", 5, "rx"},
+		{"Murph", "For time", "wod", "1 mile run, 100 Pull-ups, 200 Push-ups, 300 Air Squats, 1 mile run", 45, "rx"},
+		{"Fuerza A", "Back Squat", "strength", "5x5 Back Squat @ 80%", 45, "intermediate"},
+		{"Skill Work", "Muscle-up Progression", "skill", "3 rounds: 5 strict pull-ups, 5 ring dips, 5 muscle-up transitions", 20, "intermediate"},
+		{"Cardio", "Running Intervals", "cardio", "5 rounds: 400m run @ 80%, 2min rest", 25, "beginner"},
+	}
+
+	for _, r := range routines {
+		var exists int
+		err = tx.QueryRow("SELECT COUNT(*) FROM routines WHERE name = $1", r.name).Scan(&exists)
+		if err != nil {
+			continue
+		}
+		if exists == 0 {
+			_, err = tx.Exec(`
+				INSERT INTO routines (name, description, type, content, duration, difficulty, created_by, active)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+				r.name, r.desc, r.rtype, r.content, r.duration, r.difficulty, adminID)
+			if err != nil {
+				log.Printf("Warning: Failed to insert routine %s: %v", r.name, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	log.Println("Default routines seeded successfully")
+	return nil
+}
+
 func Seed(db *sql.DB) error {
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
@@ -14,6 +88,10 @@ func Seed(db *sql.DB) error {
 		return err
 	}
 	if count > 0 {
+		// Users exist, but ensure routines exist
+		if err := SeedRoutines(db); err != nil {
+			log.Printf("Warning: Failed to seed routines: %v", err)
+		}
 		return nil
 	}
 
