@@ -233,12 +233,17 @@ func Migrate(db *sql.DB) error {
 	DO $$
 	BEGIN
 		IF EXISTS (
-			SELECT 1 FROM information_schema.columns 
+			SELECT 1 FROM information_schema.columns
 			WHERE table_name = 'routines' AND column_name = 'instructor_id'
 		) THEN
 			CREATE INDEX IF NOT EXISTS idx_routines_instructor ON routines(instructor_id);
 		END IF;
 	END $$;
+
+	-- Add billable, target_user_id, is_custom to routines
+	ALTER TABLE routines ADD COLUMN IF NOT EXISTS billable BOOLEAN DEFAULT false;
+	ALTER TABLE routines ADD COLUMN IF NOT EXISTS target_user_id INTEGER REFERENCES users(id);
+	ALTER TABLE routines ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT false;
 	`
 
 	_, err := db.Exec(query)

@@ -160,8 +160,17 @@ class ApiClient {
   }
 
   // Routines
-  async getRoutines() {
-    return this.request<any>('/routines');
+  async getRoutines(params?: { type?: string; custom?: boolean }) {
+    const qs = new URLSearchParams();
+    if (params?.type) qs.append('type', params.type);
+    if (params?.custom !== undefined) qs.append('custom', String(params.custom));
+    const query = qs.toString();
+    return this.request<any>(`/routines${query ? `?${query}` : ''}`);
+  }
+
+  async getCustomRoutines(userId?: number) {
+    const qs = userId ? `?user_id=${userId}` : '';
+    return this.request<any>(`/routines/custom${qs}`);
   }
 
   async createRoutine(data: any) {
@@ -181,6 +190,14 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ routine_id: routineId, notes }),
     });
+  }
+
+  async removeScheduleRoutine(scheduleId: number) {
+    return this.request<any>(`/schedules/${scheduleId}/routine`, { method: 'DELETE' });
+  }
+
+  async getScheduleRoutine(scheduleId: number) {
+    return this.request<any>(`/schedules/${scheduleId}/routine`);
   }
 
   // Instructors

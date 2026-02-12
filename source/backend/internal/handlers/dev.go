@@ -255,14 +255,37 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			routine *models.Routine
 			instIdx int // índice del instructor (-1 si no tiene)
 		}{
-			{&models.Routine{Name: "Fran", Description: "21-15-9", Type: "wod", Content: "Thruster 43kg, Pull-ups", Duration: 10, Difficulty: "rx", CreatedBy: adminID}, 0},
-			{&models.Routine{Name: "Cindy", Description: "AMRAP 20 min", Type: "wod", Content: "5 Pull-ups, 10 Push-ups, 15 Air Squats", Duration: 20, Difficulty: "intermediate", CreatedBy: adminID}, -1},
-			{&models.Routine{Name: "Helen", Description: "3 rondas", Type: "wod", Content: "400m run, 21 KB swing 24kg, 12 Pull-ups", Duration: 12, Difficulty: "intermediate", CreatedBy: adminID}, 0},
+			// WODs estándar
+			{&models.Routine{Name: "Fran", Description: "21-15-9", Type: "wod", Content: "Thruster 43kg\nPull-ups", Duration: 10, Difficulty: "rx", CreatedBy: adminID}, 0},
+			{&models.Routine{Name: "Cindy", Description: "AMRAP 20 min", Type: "wod", Content: "5 Pull-ups\n10 Push-ups\n15 Air Squats", Duration: 20, Difficulty: "intermediate", CreatedBy: adminID}, -1},
+			{&models.Routine{Name: "Helen", Description: "3 rondas", Type: "wod", Content: "400m run\n21 KB swing 24kg\n12 Pull-ups", Duration: 12, Difficulty: "intermediate", CreatedBy: adminID}, 0},
 			{&models.Routine{Name: "Grace", Description: "For time", Type: "wod", Content: "30 Clean & Jerk 43kg", Duration: 5, Difficulty: "rx", CreatedBy: adminID}, 1},
-			{&models.Routine{Name: "Murph", Description: "For time", Type: "wod", Content: "1 mile run, 100 Pull-ups, 200 Push-ups, 300 Air Squats, 1 mile run", Duration: 45, Difficulty: "rx", CreatedBy: adminID}, -1},
-			{&models.Routine{Name: "Fuerza A", Description: "Back Squat", Type: "strength", Content: "5x5 Back Squat @ 80%", Duration: 45, Difficulty: "intermediate", CreatedBy: adminID}, 1},
+			{&models.Routine{Name: "Murph", Description: "For time con chaleco", Type: "wod", Content: "1 mile run\n100 Pull-ups\n200 Push-ups\n300 Air Squats\n1 mile run", Duration: 45, Difficulty: "rx", CreatedBy: adminID}, -1},
+			// Fuerza
+			{&models.Routine{Name: "Fuerza A - Back Squat", Description: "Ciclo de fuerza", Type: "strength", Content: "5x5 Back Squat @ 80%\n3x8 Front Squat @ 65%", Duration: 45, Difficulty: "intermediate", CreatedBy: adminID}, 1},
+			{&models.Routine{Name: "Fuerza B - Press", Description: "Ciclo de fuerza", Type: "strength", Content: "5x5 Strict Press\n3x8 Push Press @ 70%\n3x12 DB Lateral Raise", Duration: 40, Difficulty: "intermediate", CreatedBy: adminID}, 0},
+			// Skill
+			{&models.Routine{Name: "Handstand Practice", Description: "Trabajo de habilidad", Type: "skill", Content: "5 min handstand hold practice\n10 min wall walks\n5 min freestanding attempts", Duration: 20, Difficulty: "advanced", CreatedBy: adminID}, -1},
+			{&models.Routine{Name: "Double Unders Clinic", Description: "Práctica de salto", Type: "skill", Content: "3x50 Single unders\n5x20 Double unders\nEMOM 10: 15 DU", Duration: 25, Difficulty: "beginner", CreatedBy: adminID}, 0},
+			// Cardio
+			{&models.Routine{Name: "Row & Run", Description: "Cardio mixto", Type: "cardio", Content: "500m Row\n400m Run\nx5 rondas\nDescanso 1 min entre rondas", Duration: 30, Difficulty: "intermediate", CreatedBy: adminID}, -1},
 		}
 		for _, r := range routines {
+			if r.instIdx >= 0 && r.instIdx < len(instructorIDs) {
+				r.routine.InstructorID = &instructorIDs[r.instIdx]
+			}
+			_ = routineRepo.Create(r.routine)
+		}
+
+		// 8b. Rutinas personalizadas (custom + billable)
+		customRoutines := []struct {
+			routine *models.Routine
+			instIdx int
+		}{
+			{&models.Routine{Name: "Plan fuerza Juan", Description: "Rutina personalizada de fuerza", Type: "strength", Content: "5x3 Back Squat @ 85%\n4x6 Deadlift @ 75%\n3x10 Lunges", Duration: 50, Difficulty: "advanced", CreatedBy: adminID, IsCustom: true, TargetUserID: &userID, Billable: true}, 0},
+			{&models.Routine{Name: "Rehabilitación hombro Juan", Description: "Rutina de movilidad", Type: "skill", Content: "Band pull-aparts 3x20\nExternal rotations 3x15\nFace pulls 3x12\nOverhead stretch 3x30s", Duration: 20, Difficulty: "beginner", CreatedBy: adminID, IsCustom: true, TargetUserID: &userID, Billable: false}, -1},
+		}
+		for _, r := range customRoutines {
 			if r.instIdx >= 0 && r.instIdx < len(instructorIDs) {
 				r.routine.InstructorID = &instructorIDs[r.instIdx]
 			}
@@ -311,7 +334,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		// 11. Asignar rutinas a algunos horarios (entrenamiento del día)
 		schedules, _ := classRepo.ListSchedules(weekStart, weekStart.AddDate(0, 0, 14))
-		routineList, _ := routineRepo.List("", 10, 0)
+		routineList, _ := routineRepo.List("", nil, 10, 0)
 		for i, s := range schedules {
 			if i >= len(routineList) {
 				break

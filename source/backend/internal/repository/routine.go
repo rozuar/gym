@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"boxmagic/internal/models"
@@ -16,27 +17,31 @@ func NewRoutineRepository(db *sql.DB) *RoutineRepository {
 }
 
 func (r *RoutineRepository) Create(routine *models.Routine) error {
-	query := `INSERT INTO routines (name, description, type, content, duration, difficulty, instructor_id, created_by, active)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+	query := `INSERT INTO routines (name, description, type, content, duration, difficulty, instructor_id, created_by, active, billable, target_user_id, is_custom)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11)
 			  RETURNING id, created_at, updated_at`
 	return r.db.QueryRow(query, routine.Name, routine.Description, routine.Type,
-		routine.Content, routine.Duration, routine.Difficulty, routine.InstructorID, routine.CreatedBy).
+		routine.Content, routine.Duration, routine.Difficulty, routine.InstructorID, routine.CreatedBy,
+		routine.Billable, routine.TargetUserID, routine.IsCustom).
 		Scan(&routine.ID, &routine.CreatedAt, &routine.UpdatedAt)
 }
 
 func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error) {
 	routine := &models.RoutineWithCreator{}
 	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
-			         r.instructor_id, r.created_by, r.active, r.created_at, r.updated_at, u.name, i.name
+			         r.instructor_id, r.created_by, r.active, r.billable, r.target_user_id, r.is_custom,
+			         r.created_at, r.updated_at, u.name, i.name, tu.name
 			  FROM routines r
 			  JOIN users u ON r.created_by = u.id
 			  LEFT JOIN instructors i ON r.instructor_id = i.id
+			  LEFT JOIN users tu ON r.target_user_id = tu.id
 			  WHERE r.id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
 		&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
 		&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
-		&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName,
+		&routine.Billable, &routine.TargetUserID, &routine.IsCustom,
+		&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName, &routine.TargetUserName,
 	)
 	if err != nil {
 		return nil, err
@@ -44,26 +49,30 @@ func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error
 	return routine, nil
 }
 
-func (r *RoutineRepository) List(routineType string, limit, offset int) ([]*models.RoutineWithCreator, error) {
+func (r *RoutineRepository) List(routineType string, custom *bool, limit, offset int) ([]*models.RoutineWithCreator, error) {
 	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
-			         r.instructor_id, r.created_by, r.active, r.created_at, r.updated_at, u.name, i.name
+			         r.instructor_id, r.created_by, r.active, r.billable, r.target_user_id, r.is_custom,
+			         r.created_at, r.updated_at, u.name, i.name, tu.name
 			  FROM routines r
 			  JOIN users u ON r.created_by = u.id
 			  LEFT JOIN instructors i ON r.instructor_id = i.id
+			  LEFT JOIN users tu ON r.target_user_id = tu.id
 			  WHERE r.active = true`
 
+	argN := 1
 	args := []interface{}{}
 	if routineType != "" {
-		query += " AND r.type = $1"
+		query += fmt.Sprintf(" AND r.type = $%d", argN)
 		args = append(args, routineType)
+		argN++
+	}
+	if custom != nil {
+		query += fmt.Sprintf(" AND r.is_custom = $%d", argN)
+		args = append(args, *custom)
+		argN++
 	}
 	query += " ORDER BY r.created_at DESC"
-
-	if len(args) > 0 {
-		query += " LIMIT $2 OFFSET $3"
-	} else {
-		query += " LIMIT $1 OFFSET $2"
-	}
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argN, argN+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(query, args...)
@@ -78,7 +87,8 @@ func (r *RoutineRepository) List(routineType string, limit, offset int) ([]*mode
 		if err := rows.Scan(
 			&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
 			&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
-			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName,
+			&routine.Billable, &routine.TargetUserID, &routine.IsCustom,
+			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName, &routine.TargetUserName,
 		); err != nil {
 			return nil, err
 		}
@@ -88,15 +98,60 @@ func (r *RoutineRepository) List(routineType string, limit, offset int) ([]*mode
 }
 
 func (r *RoutineRepository) Update(routine *models.Routine) error {
-	query := `UPDATE routines SET name=$1, description=$2, type=$3, content=$4, duration=$5, difficulty=$6, instructor_id=$7, active=$8, updated_at=$9 WHERE id=$10`
+	query := `UPDATE routines SET name=$1, description=$2, type=$3, content=$4, duration=$5, difficulty=$6, instructor_id=$7, active=$8, billable=$9, target_user_id=$10, is_custom=$11, updated_at=$12 WHERE id=$13`
 	routine.UpdatedAt = time.Now()
 	_, err := r.db.Exec(query, routine.Name, routine.Description, routine.Type, routine.Content,
-		routine.Duration, routine.Difficulty, routine.InstructorID, routine.Active, routine.UpdatedAt, routine.ID)
+		routine.Duration, routine.Difficulty, routine.InstructorID, routine.Active,
+		routine.Billable, routine.TargetUserID, routine.IsCustom, routine.UpdatedAt, routine.ID)
 	return err
 }
 
 func (r *RoutineRepository) Delete(id int64) error {
 	_, err := r.db.Exec("UPDATE routines SET active = false WHERE id = $1", id)
+	return err
+}
+
+func (r *RoutineRepository) ListCustom(targetUserID *int64) ([]*models.RoutineWithCreator, error) {
+	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
+			         r.instructor_id, r.created_by, r.active, r.billable, r.target_user_id, r.is_custom,
+			         r.created_at, r.updated_at, u.name, i.name, tu.name
+			  FROM routines r
+			  JOIN users u ON r.created_by = u.id
+			  LEFT JOIN instructors i ON r.instructor_id = i.id
+			  LEFT JOIN users tu ON r.target_user_id = tu.id
+			  WHERE r.active = true AND r.is_custom = true`
+
+	args := []interface{}{}
+	if targetUserID != nil {
+		query += " AND r.target_user_id = $1"
+		args = append(args, *targetUserID)
+	}
+	query += " ORDER BY r.created_at DESC"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var routines []*models.RoutineWithCreator
+	for rows.Next() {
+		routine := &models.RoutineWithCreator{}
+		if err := rows.Scan(
+			&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
+			&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
+			&routine.Billable, &routine.TargetUserID, &routine.IsCustom,
+			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName, &routine.TargetUserName,
+		); err != nil {
+			return nil, err
+		}
+		routines = append(routines, routine)
+	}
+	return routines, nil
+}
+
+func (r *RoutineRepository) RemoveScheduleRoutine(scheduleID int64) error {
+	_, err := r.db.Exec("DELETE FROM schedule_routines WHERE class_schedule_id = $1", scheduleID)
 	return err
 }
 

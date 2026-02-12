@@ -101,6 +101,7 @@ func main() {
 	mux.Handle("POST /api/v1/bookings/{id}/checkin", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.CheckIn))))
 
 	// Routines
+	mux.Handle("GET /api/v1/routines/custom", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.ListCustom))))
 	mux.Handle("GET /api/v1/routines", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.List)))
 	mux.Handle("GET /api/v1/routines/{id}", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.GetByID)))
 	mux.Handle("POST /api/v1/routines", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.Create))))
@@ -111,6 +112,7 @@ func main() {
 	// Schedule Routines
 	mux.Handle("GET /api/v1/schedules/{scheduleId}/routine", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.GetScheduleRoutine)))
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/routine", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.AssignToSchedule))))
+	mux.Handle("DELETE /api/v1/schedules/{scheduleId}/routine", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.RemoveScheduleRoutine))))
 
 	// Results
 	mux.Handle("POST /api/v1/results", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.LogResult)))

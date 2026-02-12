@@ -72,11 +72,13 @@ type ClassRepo interface {
 type RoutineRepo interface {
 	Create(routine *models.Routine) error
 	GetByID(id int64) (*models.RoutineWithCreator, error)
-	List(routineType string, limit, offset int) ([]*models.RoutineWithCreator, error)
+	List(routineType string, custom *bool, limit, offset int) ([]*models.RoutineWithCreator, error)
+	ListCustom(targetUserID *int64) ([]*models.RoutineWithCreator, error)
 	Update(routine *models.Routine) error
 	Delete(id int64) error
 	AssignToSchedule(sr *models.ScheduleRoutine) error
 	GetScheduleRoutine(scheduleID int64) (*models.ScheduleRoutineWithDetails, error)
+	RemoveScheduleRoutine(scheduleID int64) error
 	LogResult(result *models.UserRoutineResult) error
 	GetUserResults(userID int64, limit int) ([]*models.UserResultWithDetails, error)
 	GetRoutineHistory(routineID int64, userID int64) ([]*models.UserRoutineResult, error)

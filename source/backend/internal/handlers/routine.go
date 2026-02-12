@@ -48,6 +48,9 @@ func (h *RoutineHandler) Create(w http.ResponseWriter, r *http.Request) {
 		InstructorID: req.InstructorID,
 		CreatedBy:    userID,
 		Active:       true,
+		Billable:     req.Billable,
+		TargetUserID: req.TargetUserID,
+		IsCustom:     req.IsCustom,
 	}
 
 	if err := h.routineRepo.Create(routine); err != nil {
@@ -74,7 +77,13 @@ func (h *RoutineHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	routines, err := h.routineRepo.List(routineType, limit, offset)
+	var custom *bool
+	if c := r.URL.Query().Get("custom"); c != "" {
+		val := c == "true"
+		custom = &val
+	}
+
+	routines, err := h.routineRepo.List(routineType, custom, limit, offset)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to fetch routines")
 		return
@@ -149,6 +158,15 @@ func (h *RoutineHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Active != nil {
 		routine.Active = *req.Active
 	}
+	if req.Billable != nil {
+		routine.Billable = *req.Billable
+	}
+	if req.TargetUserID != nil {
+		routine.TargetUserID = req.TargetUserID
+	}
+	if req.IsCustom != nil {
+		routine.IsCustom = *req.IsCustom
+	}
 
 	if err := h.routineRepo.Update(&routine.Routine); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to update routine")
@@ -156,6 +174,46 @@ func (h *RoutineHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, routine)
+}
+
+func (h *RoutineHandler) ListCustom(w http.ResponseWriter, r *http.Request) {
+	var targetUserID *int64
+	if uid := r.URL.Query().Get("user_id"); uid != "" {
+		parsed, err := strconv.ParseInt(uid, 10, 64)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid user_id")
+			return
+		}
+		targetUserID = &parsed
+	}
+
+	routines, err := h.routineRepo.ListCustom(targetUserID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch custom routines")
+		return
+	}
+	if routines == nil {
+		routines = []*models.RoutineWithCreator{}
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"routines": routines,
+	})
+}
+
+func (h *RoutineHandler) RemoveScheduleRoutine(w http.ResponseWriter, r *http.Request) {
+	scheduleID, err := strconv.ParseInt(r.PathValue("scheduleId"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid schedule ID")
+		return
+	}
+
+	if err := h.routineRepo.RemoveScheduleRoutine(scheduleID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to remove routine assignment")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *RoutineHandler) Delete(w http.ResponseWriter, r *http.Request) {
