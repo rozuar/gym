@@ -80,8 +80,9 @@ export default function SchedulesPage() {
   const groupByDate = (items: any[]) => {
     const groups: Record<string, any[]> = {};
     items.forEach((item) => {
-      if (!groups[item.date]) groups[item.date] = [];
-      groups[item.date].push(item);
+      const dateKey = item.date?.slice(0, 10) || item.date;
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(item);
     });
     return groups;
   };
