@@ -233,7 +233,7 @@ export default function RoutinesPage() {
                   <option value="">Seleccionar...</option>
                   {schedules.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.date} {s.start_time} - {s.class_name}
+                      {s.date?.slice(0, 10)} {s.start_time} - {s.class_name}
                     </option>
                   ))}
                 </select>
