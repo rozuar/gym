@@ -123,6 +123,10 @@ class ApiClient {
     return this.request<any>('/classes');
   }
 
+  async getClass(id: number) {
+    return this.request<any>(`/classes/${id}`);
+  }
+
   async createClass(data: any) {
     return this.request<any>('/classes', { method: 'POST', body: JSON.stringify(data) });
   }
@@ -177,6 +181,27 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ routine_id: routineId, notes }),
     });
+  }
+
+  // Instructors
+  async getInstructors(activeOnly = false) {
+    return this.request<any>(`/instructors${activeOnly ? '' : '?active=false'}`);
+  }
+
+  async getInstructor(id: number) {
+    return this.request<any>(`/instructors/${id}`);
+  }
+
+  async createInstructor(data: any) {
+    return this.request<any>('/instructors', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateInstructor(id: number, data: any) {
+    return this.request<any>(`/instructors/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async deleteInstructor(id: number) {
+    return this.request<any>(`/instructors/${id}`, { method: 'DELETE' });
   }
 
   // Payments

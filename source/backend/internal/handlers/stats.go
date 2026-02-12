@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"net/http"
@@ -13,12 +12,12 @@ import (
 )
 
 type StatsHandler struct {
-	statsRepo *repository.StatsRepository
+	statsRepo repository.StatsRepo
 }
 
-func NewStatsHandler(db *sql.DB) *StatsHandler {
+func NewStatsHandler(statsRepo repository.StatsRepo) *StatsHandler {
 	return &StatsHandler{
-		statsRepo: repository.NewStatsRepository(db),
+		statsRepo: statsRepo,
 	}
 }
 

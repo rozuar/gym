@@ -88,3 +88,9 @@ func GetRole(ctx context.Context) models.Role {
 	}
 	return ""
 }
+
+func WithAuth(ctx context.Context, userID int64, role models.Role) context.Context {
+	ctx = context.WithValue(ctx, userIDKey, userID)
+	ctx = context.WithValue(ctx, roleKey, role)
+	return ctx
+}

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -11,12 +10,12 @@ import (
 )
 
 type PlanHandler struct {
-	planRepo *repository.PlanRepository
+	planRepo repository.PlanRepo
 }
 
-func NewPlanHandler(db *sql.DB) *PlanHandler {
+func NewPlanHandler(planRepo repository.PlanRepo) *PlanHandler {
 	return &PlanHandler{
-		planRepo: repository.NewPlanRepository(db),
+		planRepo: planRepo,
 	}
 }
 

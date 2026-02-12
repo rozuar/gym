@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -12,12 +11,12 @@ import (
 )
 
 type UserHandler struct {
-	userRepo *repository.UserRepository
+	userRepo repository.UserRepo
 }
 
-func NewUserHandler(db *sql.DB) *UserHandler {
+func NewUserHandler(userRepo repository.UserRepo) *UserHandler {
 	return &UserHandler{
-		userRepo: repository.NewUserRepository(db),
+		userRepo: userRepo,
 	}
 }
 

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -12,12 +11,12 @@ import (
 )
 
 type RoutineHandler struct {
-	routineRepo *repository.RoutineRepository
+	routineRepo repository.RoutineRepo
 }
 
-func NewRoutineHandler(db *sql.DB) *RoutineHandler {
+func NewRoutineHandler(routineRepo repository.RoutineRepo) *RoutineHandler {
 	return &RoutineHandler{
-		routineRepo: repository.NewRoutineRepository(db),
+		routineRepo: routineRepo,
 	}
 }
 
@@ -46,7 +45,7 @@ func (h *RoutineHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Content:      req.Content,
 		Duration:     req.Duration,
 		Difficulty:   req.Difficulty,
-		InstructorID: req.InstructorID, // Opcional
+		InstructorID: req.InstructorID,
 		CreatedBy:    userID,
 		Active:       true,
 	}
@@ -145,7 +144,7 @@ func (h *RoutineHandler) Update(w http.ResponseWriter, r *http.Request) {
 		routine.Difficulty = req.Difficulty
 	}
 	if req.InstructorID != nil {
-		routine.InstructorID = req.InstructorID // Opcional, puede ser nil para remover
+		routine.InstructorID = req.InstructorID
 	}
 	if req.Active != nil {
 		routine.Active = *req.Active
@@ -305,7 +304,6 @@ func (h *RoutineHandler) UpdateResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify result belongs to user
 	result, err := h.routineRepo.GetResultByID(resultID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Result not found")
@@ -342,7 +340,6 @@ func (h *RoutineHandler) UpdateResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch updated result
 	updatedResult, _ := h.routineRepo.GetResultByID(resultID)
 	respondJSON(w, http.StatusOK, updatedResult)
 }
@@ -356,7 +353,6 @@ func (h *RoutineHandler) DeleteResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify result belongs to user
 	result, err := h.routineRepo.GetResultByID(resultID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Result not found")

@@ -10,8 +10,8 @@ type Routine struct {
 	Description  string    `json:"description,omitempty"`
 	Type         string    `json:"type"` // wod, strength, skill, cardio
 	Content      string    `json:"content"`
-	Duration     int       `json:"duration,omitempty"`   // minutos
-	Difficulty   string    `json:"difficulty,omitempty"` // beginner, intermediate, advanced, rx
+	Duration     int       `json:"duration,omitempty"`      // minutos
+	Difficulty   string    `json:"difficulty,omitempty"`    // beginner, intermediate, advanced, rx
 	InstructorID *int64    `json:"instructor_id,omitempty"` // Opcional
 	CreatedBy    int64     `json:"created_by"`
 	Active       bool      `json:"active"`

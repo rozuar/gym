@@ -1,23 +1,24 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 
-	"boxmagic/internal/config"
 	"boxmagic/internal/models"
-	"boxmagic/internal/repository"
 	"boxmagic/internal/services"
 )
 
-type AuthHandler struct {
-	authService *services.AuthService
+type AuthServicer interface {
+	Register(req *models.RegisterRequest) (*models.AuthResponse, error)
+	Login(req *models.LoginRequest) (*models.AuthResponse, error)
+	Refresh(refreshToken string) (*models.AuthResponse, error)
 }
 
-func NewAuthHandler(db *sql.DB, cfg *config.Config) *AuthHandler {
-	userRepo := repository.NewUserRepository(db)
-	authService := services.NewAuthService(userRepo, cfg)
+type AuthHandler struct {
+	authService AuthServicer
+}
+
+func NewAuthHandler(authService AuthServicer) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 

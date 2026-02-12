@@ -7,8 +7,9 @@
 !/.gitignore
 !/source/
 
-# Archivos relacionados con IA / Documentación de contexto
+# Documentos y análisis (refined) - no van al repo
 context/
+refined/
 *.md
 !source/**/*.md
 !source/**/README.md
@@ -62,12 +63,6 @@ prompt/
 ai-context/
 .cursor-context/
 
-# Archivos de documentación fuera de source/
-docs/
-documentation/
-*.txt
-!source/**/*.txt
-
 # Archivos de configuración de proyecto (fuera de source/)
 .gitattributes
 .editorconfig
@@ -85,9 +80,8 @@ out/
 source/backend/api
 source/backend/main
 
-# Node modules fuera de source/
+# Node modules
 node_modules/
-!source/**/node_modules/
 
 # Archivos de Python (si hay scripts de IA)
 __pycache__/
@@ -139,5 +133,5 @@ go.sum
 !source/**/go.mod
 !source/**/go.sum
 
-# Mantener solo source/ visible
-# Todo lo demás está excluido por defecto
+# Mantener solo source/ visible en el repo
+# Documentos y análisis van en refined/ (excluido)

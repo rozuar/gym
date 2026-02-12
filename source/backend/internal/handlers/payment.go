@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -13,14 +12,14 @@ import (
 )
 
 type PaymentHandler struct {
-	paymentRepo *repository.PaymentRepository
-	planRepo    *repository.PlanRepository
+	paymentRepo repository.PaymentRepo
+	planRepo    repository.PlanRepo
 }
 
-func NewPaymentHandler(db *sql.DB) *PaymentHandler {
+func NewPaymentHandler(paymentRepo repository.PaymentRepo, planRepo repository.PlanRepo) *PaymentHandler {
 	return &PaymentHandler{
-		paymentRepo: repository.NewPaymentRepository(db),
-		planRepo:    repository.NewPlanRepository(db),
+		paymentRepo: paymentRepo,
+		planRepo:    planRepo,
 	}
 }
 
@@ -63,14 +62,12 @@ func (h *PaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simular pago completado (en producción integrar pasarela de pago)
 	if err := h.paymentRepo.UpdateStatus(payment.ID, models.PaymentCompleted); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to process payment")
 		return
 	}
 	payment.Status = models.PaymentCompleted
 
-	// Crear suscripción
 	startDate := time.Now()
 	endDate := startDate.AddDate(0, 0, plan.Duration)
 

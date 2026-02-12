@@ -9,6 +9,7 @@ const menuItems = [
   { href: '/users', label: 'Usuarios', icon: '👥' },
   { href: '/plans', label: 'Planes', icon: '💳' },
   { href: '/classes', label: 'Clases', icon: '🏋️' },
+  { href: '/instructors', label: 'Instructores', icon: '🎓' },
   { href: '/schedules', label: 'Horarios', icon: '📅' },
   { href: '/routines', label: 'Rutinas', icon: '📝' },
   { href: '/payments', label: 'Pagos', icon: '💰' },

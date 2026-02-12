@@ -8,6 +8,7 @@ import (
 	"boxmagic/internal/handlers"
 	"boxmagic/internal/middleware"
 	"boxmagic/internal/repository"
+	"boxmagic/internal/services"
 )
 
 func main() {
@@ -29,14 +30,24 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	authHandler := handlers.NewAuthHandler(db, cfg)
-	userHandler := handlers.NewUserHandler(db)
-	planHandler := handlers.NewPlanHandler(db)
-	paymentHandler := handlers.NewPaymentHandler(db)
-	classHandler := handlers.NewClassHandler(db)
-	routineHandler := handlers.NewRoutineHandler(db)
-	instructorHandler := handlers.NewInstructorHandler(db)
-	statsHandler := handlers.NewStatsHandler(db)
+	userRepo := repository.NewUserRepository(db)
+	planRepo := repository.NewPlanRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
+	classRepo := repository.NewClassRepository(db)
+	routineRepo := repository.NewRoutineRepository(db)
+	instructorRepo := repository.NewInstructorRepository(db)
+	statsRepo := repository.NewStatsRepository(db)
+
+	authService := services.NewAuthService(userRepo, cfg)
+
+	authHandler := handlers.NewAuthHandler(authService)
+	userHandler := handlers.NewUserHandler(userRepo)
+	planHandler := handlers.NewPlanHandler(planRepo)
+	paymentHandler := handlers.NewPaymentHandler(paymentRepo, planRepo)
+	classHandler := handlers.NewClassHandler(classRepo, paymentRepo, instructorRepo)
+	routineHandler := handlers.NewRoutineHandler(routineRepo)
+	instructorHandler := handlers.NewInstructorHandler(instructorRepo)
+	statsHandler := handlers.NewStatsHandler(statsRepo)
 
 	// Public routes
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)

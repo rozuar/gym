@@ -63,14 +63,70 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 
 ## Datos Iniciales
 
+### Opción 1: Seeders SQL (Recomendado para producción)
+
+Los seeders SQL pueden ejecutarse directamente contra la base de datos sin necesidad de hacer deploy del backend. Esto es útil porque hacer deploy tiene costo, pero subir datos no tanto.
+
+#### Desarrollo Local
+
+```bash
+# Ejecutar seeders contra base de datos local
+./scripts/seed-db.sh
+
+# O con DATABASE_URL personalizado
+DATABASE_URL="postgresql://user:pass@host:port/dbname" ./scripts/seed-db.sh
+```
+
+#### Railway (Producción)
+
+**Opción A: Usando Railway CLI**
+```bash
+# Requiere: railway CLI instalado y autenticado
+./scripts/seed-railway.sh
+```
+
+**Opción B: Método directo (Recomendado)**
+```bash
+# 1. Obtén DATABASE_URL desde Railway dashboard:
+#    Variables > DATABASE_URL > Copy
+
+# 2. Ejecuta el script con la URL
+./scripts/seed-railway-direct.sh 'postgresql://...'
+
+# O exporta la variable y ejecuta
+export DATABASE_URL='postgresql://...'
+./scripts/seed-railway-direct.sh
+```
+
+**Opción C: Ejecutar SQL directamente**
+```bash
+# Obtén DATABASE_URL desde Railway y ejecuta:
+psql "$DATABASE_URL" -f scripts/seeders/seed_all.sql
+```
+
+#### Archivos de Seeders
+
+Los seeders están organizados en `scripts/seeders/`:
+- `seed_all.sql` - Seeder completo (recomendado)
+- `01_users.sql` - Solo usuarios
+- `02_disciplines.sql` - Solo disciplinas
+- `03_plans.sql` - Solo planes
+- `04_instructors.sql` - Solo instructores
+- `05_routines.sql` - Solo rutinas
+
+Todos los seeders son **idempotentes**: pueden ejecutarse múltiples veces sin duplicar datos.
+
+### Opción 2: Seeder via API (Desarrollo)
+
 ```bash
 # Después de iniciar el backend
 ./scripts/seed.sh
 ```
 
-Credenciales admin por defecto:
-- Email: admin@boxmagic.cl
-- Password: admin123
+### Credenciales por Defecto
+
+- **Admin**: admin@boxmagic.cl / admin123
+- **Usuario**: user@boxmagic.cl / user123
 
 ## Despliegue
 

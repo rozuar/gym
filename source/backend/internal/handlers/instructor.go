@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -11,12 +10,12 @@ import (
 )
 
 type InstructorHandler struct {
-	instructorRepo *repository.InstructorRepository
+	instructorRepo repository.InstructorRepo
 }
 
-func NewInstructorHandler(db *sql.DB) *InstructorHandler {
+func NewInstructorHandler(instructorRepo repository.InstructorRepo) *InstructorHandler {
 	return &InstructorHandler{
-		instructorRepo: repository.NewInstructorRepository(db),
+		instructorRepo: instructorRepo,
 	}
 }
 

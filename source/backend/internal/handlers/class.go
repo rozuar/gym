@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -13,14 +12,16 @@ import (
 )
 
 type ClassHandler struct {
-	classRepo   *repository.ClassRepository
-	paymentRepo *repository.PaymentRepository
+	classRepo      repository.ClassRepo
+	paymentRepo    repository.PaymentRepo
+	instructorRepo repository.InstructorRepo
 }
 
-func NewClassHandler(db *sql.DB) *ClassHandler {
+func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.PaymentRepo, instructorRepo repository.InstructorRepo) *ClassHandler {
 	return &ClassHandler{
-		classRepo:   repository.NewClassRepository(db),
-		paymentRepo: repository.NewPaymentRepository(db),
+		classRepo:      classRepo,
+		paymentRepo:    paymentRepo,
+		instructorRepo: instructorRepo,
 	}
 }
 
@@ -79,7 +80,6 @@ func (h *ClassHandler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate: 1-2 instructors max
 	if len(req.InstructorIDs) > 2 {
 		respondError(w, http.StatusBadRequest, "Maximum 2 instructors per class")
 		return
@@ -101,16 +101,13 @@ func (h *ClassHandler) CreateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Assign instructors (1-2)
 	if len(req.InstructorIDs) > 0 {
-		instructorRepo := repository.NewInstructorRepository(h.classRepo.GetDB())
-		if err := instructorRepo.AssignToClass(c.ID, req.InstructorIDs); err != nil {
+		if err := h.instructorRepo.AssignToClass(c.ID, req.InstructorIDs); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to assign instructors")
 			return
 		}
 	}
 
-	// Reload with instructors
 	class, _ := h.classRepo.GetClassByID(c.ID)
 	if class != nil {
 		respondJSON(w, http.StatusCreated, class)
@@ -195,21 +192,17 @@ func (h *ClassHandler) UpdateClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update instructors if provided
 	if req.InstructorIDs != nil {
-		// Validate: 1-2 instructors max
 		if len(req.InstructorIDs) > 2 {
 			respondError(w, http.StatusBadRequest, "Maximum 2 instructors per class")
 			return
 		}
-		instructorRepo := repository.NewInstructorRepository(h.classRepo.GetDB())
-		if err := instructorRepo.AssignToClass(id, req.InstructorIDs); err != nil {
+		if err := h.instructorRepo.AssignToClass(id, req.InstructorIDs); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to update instructors")
 			return
 		}
 	}
 
-	// Reload with instructors
 	updatedClass, _ := h.classRepo.GetClassByID(id)
 	if updatedClass != nil {
 		respondJSON(w, http.StatusOK, updatedClass)
@@ -293,14 +286,12 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify subscription
 	subscription, err := h.paymentRepo.GetActiveSubscription(userID)
 	if err != nil {
 		respondError(w, http.StatusForbidden, "No active subscription")
 		return
 	}
 
-	// Check class limit
 	if subscription.ClassesAllowed > 0 && subscription.ClassesUsed >= subscription.ClassesAllowed {
 		respondError(w, http.StatusForbidden, "Class limit reached")
 		return
@@ -318,7 +309,6 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Increment classes used
 	h.paymentRepo.IncrementClassesUsed(subscription.ID)
 
 	respondJSON(w, http.StatusCreated, booking)
