@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -96,8 +97,8 @@ func SeedRoutines(db *sql.DB) error {
 	// Create routines (check if each exists before inserting)
 	routines := []struct {
 		name, desc, rtype, content string
-		duration                    int
-		difficulty                  string
+		duration                   int
+		difficulty                 string
 	}{
 		{"Fran", "21-15-9", "wod", "Thruster 43kg, Pull-ups", 10, "rx"},
 		{"Cindy", "AMRAP 20 min", "wod", "5 Pull-ups, 10 Push-ups, 15 Air Squats", 20, "intermediate"},
@@ -134,6 +135,146 @@ func SeedRoutines(db *sql.DB) error {
 	return nil
 }
 
+// SeedClasses ensures default classes and schedules exist in the database
+func SeedClasses(db *sql.DB) error {
+	var classCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM classes").Scan(&classCount)
+	if err != nil {
+		return err
+	}
+	if classCount > 0 {
+		return nil
+	}
+
+	log.Println("No classes found, seeding default classes and schedules...")
+
+	// Resolve discipline IDs
+	var dCross, dHalter, dGimnasia int64
+	db.QueryRow("SELECT id FROM disciplines WHERE name = 'CrossFit' LIMIT 1").Scan(&dCross)
+	db.QueryRow("SELECT id FROM disciplines WHERE name = 'Halterofilia' LIMIT 1").Scan(&dHalter)
+	db.QueryRow("SELECT id FROM disciplines WHERE name = 'Gimnasia' LIMIT 1").Scan(&dGimnasia)
+
+	if dCross == 0 || dHalter == 0 || dGimnasia == 0 {
+		log.Println("Warning: Disciplines not found, skipping class seed")
+		return nil
+	}
+
+	// Resolve instructor IDs
+	var instJuan, instMaria, instCarlos int64
+	db.QueryRow("SELECT id FROM instructors WHERE name = 'Juan Pérez' LIMIT 1").Scan(&instJuan)
+	db.QueryRow("SELECT id FROM instructors WHERE name = 'María González' LIMIT 1").Scan(&instMaria)
+	db.QueryRow("SELECT id FROM instructors WHERE name = 'Carlos Rodríguez' LIMIT 1").Scan(&instCarlos)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	type classEntry struct {
+		disciplineID             int64
+		name, desc               string
+		dayOfWeek                int
+		startTime, endTime       string
+		capacity                 int
+		instructorID             int64
+	}
+
+	classes := []classEntry{
+		// CrossFit — WOD 7AM (Lun-Vie)
+		{dCross, "WOD 7AM", "CrossFit matutino - WOD del día", 1, "07:00", "08:00", 15, instJuan},
+		{dCross, "WOD 7AM", "CrossFit matutino - WOD del día", 2, "07:00", "08:00", 15, instJuan},
+		{dCross, "WOD 7AM", "CrossFit matutino - WOD del día", 3, "07:00", "08:00", 15, instJuan},
+		{dCross, "WOD 7AM", "CrossFit matutino - WOD del día", 4, "07:00", "08:00", 15, instJuan},
+		{dCross, "WOD 7AM", "CrossFit matutino - WOD del día", 5, "07:00", "08:00", 15, instJuan},
+		// CrossFit — WOD 9AM (Lun-Vie)
+		{dCross, "WOD 9AM", "CrossFit media mañana", 1, "09:00", "10:00", 12, instJuan},
+		{dCross, "WOD 9AM", "CrossFit media mañana", 2, "09:00", "10:00", 12, instJuan},
+		{dCross, "WOD 9AM", "CrossFit media mañana", 3, "09:00", "10:00", 12, instJuan},
+		{dCross, "WOD 9AM", "CrossFit media mañana", 4, "09:00", "10:00", 12, instJuan},
+		{dCross, "WOD 9AM", "CrossFit media mañana", 5, "09:00", "10:00", 12, instJuan},
+		// CrossFit — WOD 12PM (Lun, Mie, Vie)
+		{dCross, "WOD 12PM", "CrossFit mediodía", 1, "12:00", "13:00", 10, instJuan},
+		{dCross, "WOD 12PM", "CrossFit mediodía", 3, "12:00", "13:00", 10, instJuan},
+		{dCross, "WOD 12PM", "CrossFit mediodía", 5, "12:00", "13:00", 10, instJuan},
+		// CrossFit — WOD 18PM (Lun-Vie)
+		{dCross, "WOD 18PM", "CrossFit tarde - Horario peak", 1, "18:00", "19:00", 15, instJuan},
+		{dCross, "WOD 18PM", "CrossFit tarde - Horario peak", 2, "18:00", "19:00", 15, instJuan},
+		{dCross, "WOD 18PM", "CrossFit tarde - Horario peak", 3, "18:00", "19:00", 15, instJuan},
+		{dCross, "WOD 18PM", "CrossFit tarde - Horario peak", 4, "18:00", "19:00", 15, instJuan},
+		{dCross, "WOD 18PM", "CrossFit tarde - Horario peak", 5, "18:00", "19:00", 15, instJuan},
+		// CrossFit — WOD 19:30PM (Lun-Jue)
+		{dCross, "WOD 19:30PM", "CrossFit noche", 1, "19:30", "20:30", 12, instJuan},
+		{dCross, "WOD 19:30PM", "CrossFit noche", 2, "19:30", "20:30", 12, instJuan},
+		{dCross, "WOD 19:30PM", "CrossFit noche", 3, "19:30", "20:30", 12, instJuan},
+		{dCross, "WOD 19:30PM", "CrossFit noche", 4, "19:30", "20:30", 12, instJuan},
+		// CrossFit — Sábado
+		{dCross, "WOD Sábado", "CrossFit sabatino - Team WOD", 6, "10:00", "11:30", 20, instJuan},
+		// Halterofilia — Técnica (Mar, Jue)
+		{dHalter, "Halterofilia Técnica", "Snatch y Clean & Jerk - Técnica y progresiones", 2, "10:00", "11:00", 8, instMaria},
+		{dHalter, "Halterofilia Técnica", "Snatch y Clean & Jerk - Técnica y progresiones", 4, "10:00", "11:00", 8, instMaria},
+		// Halterofilia — Fuerza (Mie, Vie)
+		{dHalter, "Halterofilia Fuerza", "Back Squat, Front Squat, Deadlift - Ciclos de fuerza", 3, "17:00", "18:00", 8, instMaria},
+		{dHalter, "Halterofilia Fuerza", "Back Squat, Front Squat, Deadlift - Ciclos de fuerza", 5, "17:00", "18:00", 8, instMaria},
+		// Halterofilia — Sábado
+		{dHalter, "Halterofilia Open", "Práctica libre con guía técnica", 6, "11:30", "12:30", 6, instMaria},
+		// Gimnasia — Skill (Lun, Mie)
+		{dGimnasia, "Gimnasia Skill", "Muscle-ups, handstand walks, ring work", 1, "10:00", "11:00", 10, instCarlos},
+		{dGimnasia, "Gimnasia Skill", "Muscle-ups, handstand walks, ring work", 3, "10:00", "11:00", 10, instCarlos},
+		// Gimnasia — Avanzada (Vie)
+		{dGimnasia, "Gimnasia Avanzada", "Ring muscle-ups, deficit HSPU, freestanding HSW", 5, "10:00", "11:00", 8, instCarlos},
+		// Calistenia (Mar, Jue)
+		{dGimnasia, "Calistenia", "Progresiones de calistenia y control corporal", 2, "17:00", "18:00", 10, instCarlos},
+		{dGimnasia, "Calistenia", "Progresiones de calistenia y control corporal", 4, "17:00", "18:00", 10, instCarlos},
+	}
+
+	for _, c := range classes {
+		var classID int64
+		err = tx.QueryRow(`
+			INSERT INTO classes (discipline_id, name, description, day_of_week, start_time, end_time, capacity, active)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+			RETURNING id`,
+			c.disciplineID, c.name, c.desc, c.dayOfWeek, c.startTime, c.endTime, c.capacity,
+		).Scan(&classID)
+		if err != nil {
+			log.Printf("Warning: Failed to insert class %s (day %d): %v", c.name, c.dayOfWeek, err)
+			continue
+		}
+		if c.instructorID > 0 {
+			_, _ = tx.Exec(`INSERT INTO class_instructors (class_id, instructor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+				classID, c.instructorID)
+		}
+	}
+
+	// Generate schedules for next 21 days
+	today := time.Now().Truncate(24 * time.Hour)
+	for i := 0; i < 21; i++ {
+		d := today.AddDate(0, 0, i)
+		dow := int(d.Weekday()) // 0=Sunday matches day_of_week convention
+		dateStr := d.Format("2006-01-02")
+
+		_, err = tx.Exec(`
+			INSERT INTO class_schedules (class_id, date, capacity, booked, cancelled)
+			SELECT cl.id, $1::date, cl.capacity, 0, false
+			FROM classes cl
+			WHERE cl.day_of_week = $2
+			  AND cl.active = true
+			  AND NOT EXISTS (SELECT 1 FROM class_schedules cs WHERE cs.class_id = cl.id AND cs.date = $1::date)
+			ON CONFLICT (class_id, date) DO NOTHING`,
+			dateStr, dow)
+		if err != nil {
+			log.Printf("Warning: Failed to generate schedules for %s: %v", dateStr, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	log.Println("Default classes and schedules seeded successfully")
+	return nil
+}
+
 func Seed(db *sql.DB) error {
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
@@ -141,12 +282,15 @@ func Seed(db *sql.DB) error {
 		return err
 	}
 	if count > 0 {
-		// Users exist, but ensure instructors and routines exist
+		// Users exist, but ensure instructors, routines, and classes exist
 		if err := SeedInstructors(db); err != nil {
 			log.Printf("Warning: Failed to seed instructors: %v", err)
 		}
 		if err := SeedRoutines(db); err != nil {
 			log.Printf("Warning: Failed to seed routines: %v", err)
+		}
+		if err := SeedClasses(db); err != nil {
+			log.Printf("Warning: Failed to seed classes: %v", err)
 		}
 		return nil
 	}
@@ -243,6 +387,11 @@ func Seed(db *sql.DB) error {
 
 	if err := tx.Commit(); err != nil {
 		return err
+	}
+
+	// Seed classes after the initial transaction (needs discipline/instructor IDs)
+	if err := SeedClasses(db); err != nil {
+		log.Printf("Warning: Failed to seed classes: %v", err)
 	}
 
 	log.Println("Seed data created successfully")
