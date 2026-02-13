@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [loadError, setLoadError] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({ name: '', phone: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', avatar_url: '' });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -25,7 +25,7 @@ export default function ProfilePage() {
       return;
     }
     if (user) {
-      setFormData({ name: user.name, phone: user.phone || '' });
+      setFormData({ name: user.name, phone: user.phone || '', avatar_url: user.avatar_url || '' });
     }
     loadSubscription();
   }, [user, authLoading, router]);
@@ -46,7 +46,11 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.updateMe(formData);
+      await api.updateMe({
+        name: formData.name,
+        phone: formData.phone,
+        avatar_url: formData.avatar_url,
+      });
       setEditing(false);
       window.location.reload();
     } catch (err: any) {
@@ -80,7 +84,16 @@ export default function ProfilePage() {
       <div className="space-y-6">
         <Card>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Datos Personales</h2>
+            <div className="flex items-center gap-4">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="w-16 h-16 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-zinc-700 flex items-center justify-center text-xl text-zinc-500 font-medium shrink-0">
+                  {user.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+              <h2 className="text-lg font-semibold">Datos Personales</h2>
+            </div>
             {!editing && (
               <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
                 Editar
@@ -100,6 +113,12 @@ export default function ProfilePage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
+              <Input
+                label="Foto de perfil (URL)"
+                value={formData.avatar_url}
+                onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                placeholder="https://..."
+              />
               <div className="flex gap-2">
                 <Button onClick={handleSave} loading={saving}>
                   Guardar
@@ -111,6 +130,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-2 text-zinc-300">
+              {user?.avatar_url && <p><span className="text-zinc-500">Foto:</span> <a href={user.avatar_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Ver</a></p>}
               <p><span className="text-zinc-500">Nombre:</span> {user?.name}</p>
               <p><span className="text-zinc-500">Email:</span> {user?.email}</p>
               <p><span className="text-zinc-500">Teléfono:</span> {user?.phone || '-'}</p>

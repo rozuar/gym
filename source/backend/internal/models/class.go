@@ -44,6 +44,7 @@ type Booking struct {
 	SubscriptionID  *int64     `json:"subscription_id,omitempty"` // null para reservas por invitación
 	Status          string     `json:"status"`                    // booked, attended, cancelled, no_show
 	CheckedInAt     *time.Time `json:"checked_in_at,omitempty"`
+	BeforePhotoURL  string     `json:"before_photo_url,omitempty"` // Foto antes de clase (costo adicional)
 	CreatedAt       time.Time  `json:"created_at"`
 }
 

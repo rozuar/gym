@@ -34,7 +34,14 @@ export function Navbar() {
           <div className="flex items-center">
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link href="/profile" className="text-zinc-300 hover:text-white">
+                <Link href="/profile" className="flex items-center gap-2 text-zinc-300 hover:text-white">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-medium">
+                      {user.name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
                   {user.name}
                 </Link>
                 <button

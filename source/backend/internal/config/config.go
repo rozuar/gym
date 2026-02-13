@@ -7,13 +7,14 @@ import (
 )
 
 type Config struct {
-	Port                 string
-	DatabaseURL          string
-	JWTSecret            string
-	JWTExpiry            time.Duration
-	RefreshTokenExpiry   time.Duration
-	Environment          string
-	InvitationClassPrice int64 // Valor CLP de 1 clase invitación (variable global)
+	Port                  string
+	DatabaseURL           string
+	JWTSecret             string
+	JWTExpiry             time.Duration
+	RefreshTokenExpiry    time.Duration
+	Environment           string
+	InvitationClassPrice  int64 // Valor CLP de 1 clase invitación (variable global)
+	BeforeClassPhotoPrice int64 // Costo adicional CLP por foto antes de clase/rutina
 }
 
 func Load() *Config {
@@ -22,15 +23,20 @@ func Load() *Config {
 	if invPrice <= 0 {
 		invPrice = 15000
 	}
+	photoPrice, _ := strconv.ParseInt(getEnv("BEFORE_CLASS_PHOTO_PRICE", "5000"), 10, 64)
+	if photoPrice < 0 {
+		photoPrice = 5000
+	}
 
 	return &Config{
-		Port:                 port,
-		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/boxmagic?sslmode=disable"),
-		JWTSecret:            getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		JWTExpiry:            parseDuration(getEnv("JWT_EXPIRY", "24h")),
-		RefreshTokenExpiry:   parseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "168h")),
-		Environment:          getEnv("API_ENV", "development"),
-		InvitationClassPrice: invPrice,
+		Port:                  port,
+		DatabaseURL:           getEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/boxmagic?sslmode=disable"),
+		JWTSecret:             getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		JWTExpiry:             parseDuration(getEnv("JWT_EXPIRY", "24h")),
+		RefreshTokenExpiry:    parseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "168h")),
+		Environment:           getEnv("API_ENV", "development"),
+		InvitationClassPrice:  invPrice,
+		BeforeClassPhotoPrice: photoPrice,
 	}
 }
 

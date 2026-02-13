@@ -392,11 +392,7 @@ function AsignarTab() {
     }
   };
 
-  if (loading) return <div className="animate-pulse">Cargando horarios...</div>;
-
   const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-  // Group schedules by date, sort chronologically
   const grouped = useMemo(() => {
     const g: Record<string, any[]> = {};
     schedules.forEach((s) => {
@@ -407,10 +403,7 @@ function AsignarTab() {
     Object.values(g).forEach((arr) => arr.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')));
     return g;
   }, [schedules]);
-
   const sortedDates = Object.keys(grouped).sort();
-
-  // Group routines by type for dropdown
   const routinesByType = useMemo(() => {
     const order = ['wod', 'strength', 'skill', 'cardio'];
     const byType: Record<string, any[]> = {};
@@ -422,6 +415,8 @@ function AsignarTab() {
     });
     return byType;
   }, [routines]);
+
+  if (loading) return <div className="animate-pulse">Cargando horarios...</div>;
 
   return (
     <>

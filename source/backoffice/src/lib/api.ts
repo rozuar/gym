@@ -43,6 +43,21 @@ class ApiClient {
     return this.request<any>('/users/me');
   }
 
+  async updateMe(data: { name?: string; phone?: string; avatar_url?: string }) {
+    return this.request<any>('/users/me', { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async getConfig() {
+    return this.request<{ invitation_class_price: number; before_class_photo_price: number }>('/config');
+  }
+
+  async setBookingBeforePhoto(bookingId: number, photoUrl: string) {
+    return this.request<any>(`/bookings/${bookingId}/before-photo`, {
+      method: 'POST',
+      body: JSON.stringify({ photo_url: photoUrl }),
+    });
+  }
+
   // Stats
   async getDashboard() {
     return this.request<any>('/stats/dashboard');

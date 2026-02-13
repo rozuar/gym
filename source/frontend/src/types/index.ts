@@ -3,8 +3,13 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
+  avatar_url?: string;
   role: 'user' | 'admin';
   active: boolean;
+  birth_date?: string;
+  sex?: 'M' | 'F';
+  weight_kg?: number;
+  height_cm?: number;
   created_at: string;
 }
 
@@ -72,6 +77,7 @@ export interface Booking {
   class_schedule_id: number;
   status: 'booked' | 'attended' | 'cancelled' | 'no_show';
   checked_in_at?: string;
+  before_photo_url?: string;
   class_name: string;
   discipline_name: string;
   schedule_date: string;

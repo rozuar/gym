@@ -51,6 +51,9 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	if req.Phone != "" {
 		user.Phone = req.Phone
 	}
+	if req.AvatarURL != nil {
+		user.AvatarURL = *req.AvatarURL
+	}
 
 	if err := h.userRepo.Update(user); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to update user")
@@ -128,6 +131,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Phone != "" {
 		user.Phone = req.Phone
+	}
+	if req.AvatarURL != nil {
+		user.AvatarURL = *req.AvatarURL
 	}
 	if req.Active != nil {
 		user.Active = *req.Active

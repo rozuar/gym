@@ -14,6 +14,9 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<number | null>(null);
+  const [photoPrice, setPhotoPrice] = useState(0);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [addingPhotoId, setAddingPhotoId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -22,6 +25,7 @@ export default function BookingsPage() {
     }
     if (user) {
       loadBookings();
+      api.getConfig().then((c) => setPhotoPrice(c.before_class_photo_price || 0)).catch(() => {});
     }
   }, [user, authLoading, router]);
 
@@ -33,6 +37,23 @@ export default function BookingsPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddPhoto = async (bookingId: number) => {
+    if (!photoUrl.trim()) {
+      alert('Ingresa la URL de la foto');
+      return;
+    }
+    setAddingPhotoId(bookingId);
+    try {
+      await api.setBookingBeforePhoto(bookingId, photoUrl.trim());
+      setPhotoUrl('');
+      setAddingPhotoId(null);
+      await loadBookings();
+    } catch (err: any) {
+      alert(err.message || 'Error al agregar foto');
+      setAddingPhotoId(null);
     }
   };
 
@@ -104,28 +125,59 @@ export default function BookingsPage() {
               day: 'numeric',
               month: 'short',
             });
+            const isUpcoming = date >= new Date(new Date().toDateString());
+            const showPhotoOption = booking.status === 'booked' && isUpcoming && !booking.before_photo_url;
 
             return (
-              <Card key={booking.id} className="flex justify-between items-center">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold">{booking.class_name}</h3>
-                    {getStatusBadge(booking.status)}
+              <Card key={booking.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div className="flex gap-3 min-w-0">
+                  {booking.before_photo_url && (
+                    <img src={booking.before_photo_url} alt="Antes" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold">{booking.class_name}</h3>
+                      {getStatusBadge(booking.status)}
+                      {booking.before_photo_url && <span className="text-xs text-amber-400" title="Foto antes de clase">📷</span>}
+                    </div>
+                    <p className="text-sm text-zinc-400">
+                      {booking.discipline_name} • {formatted} • {booking.start_time}
+                    </p>
                   </div>
-                  <p className="text-sm text-zinc-400">
-                    {booking.discipline_name} • {formatted} • {booking.start_time}
-                  </p>
                 </div>
-                {booking.status === 'booked' && (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    loading={cancelling === booking.id}
-                    onClick={() => handleCancel(booking.id)}
-                  >
-                    Cancelar
-                  </Button>
-                )}
+                <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                  {showPhotoOption && (
+                    <div className="flex gap-2 items-center flex-wrap">
+                      <input
+                        type="url"
+                        placeholder="Pega URL de la foto (sube a imgbb.com u otro)"
+                        value={addingPhotoId === booking.id ? photoUrl : ''}
+                        onChange={(e) => { setAddingPhotoId(booking.id); setPhotoUrl(e.target.value); }}
+                        onFocus={() => setAddingPhotoId(booking.id)}
+                        className="px-3 py-1.5 bg-zinc-800 border border-zinc-600 rounded text-sm min-w-[180px]"
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={addingPhotoId === booking.id}
+                        onClick={() => handleAddPhoto(booking.id)}
+                        disabled={!photoUrl.trim()}
+                      >
+                        Agregar foto {photoPrice > 0 ? `(+$${photoPrice.toLocaleString('es-CL')})` : ''}
+                      </Button>
+                    </div>
+                  )}
+                  {booking.status === 'booked' && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      loading={cancelling === booking.id}
+                      onClick={() => handleCancel(booking.id)}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
               </Card>
             );
           })}

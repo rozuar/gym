@@ -145,11 +145,17 @@ export default function SchedulesPage() {
                           {attendanceData.bookings.length === 0 ? (
                             <p className="text-sm text-zinc-500">Sin reservas</p>
                           ) : (
-                            <ul className="space-y-1">
+                            <ul className="space-y-2">
                               {attendanceData.bookings.map((b: any) => (
                                 <li key={b.id} className="flex justify-between items-center text-sm gap-2">
-                                  <span className="text-zinc-400 truncate">{b.user_name || b.user_id}</span>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {b.before_photo_url ? (
+                                      <img src={b.before_photo_url} alt="" className="w-8 h-8 rounded object-cover shrink-0" title="Foto antes de clase" />
+                                    ) : null}
+                                    <span className="text-zinc-400 truncate">{b.user_name || b.user_id}</span>
+                                  </div>
                                   <div className="flex items-center gap-2 shrink-0">
+                                    {b.before_photo_url && <span className="text-xs text-amber-400" title="Costo adicional">📷</span>}
                                     <span className={`text-xs px-2 py-0.5 rounded ${b.status === 'attended' ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700'}`}>
                                       {b.status === 'attended' ? 'Asistió' : b.status}
                                     </span>

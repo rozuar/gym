@@ -10,6 +10,7 @@ interface User {
   email: string;
   name: string;
   phone: string;
+  avatar_url?: string;
   role: string;
   active: boolean;
   created_at: string;
@@ -21,6 +22,8 @@ export default function UsersPage() {
   const [detailUser, setDetailUser] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingAvatar, setEditingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -39,14 +42,28 @@ export default function UsersPage() {
 
   const openDetail = async (id: number) => {
     setDetailUser(null);
+    setEditingAvatar(false);
     setDetailLoading(true);
     try {
       const user = await api.getUser(id);
       setDetailUser(user);
+      setAvatarUrl(user.avatar_url || '');
     } catch (err) {
       alert('Error al cargar usuario');
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const saveAvatar = async () => {
+    if (!detailUser) return;
+    try {
+      await api.updateUser(detailUser.id, { avatar_url: avatarUrl });
+      setDetailUser((p: any) => p ? { ...p, avatar_url: avatarUrl || '' } : null);
+      setEditingAvatar(false);
+      loadUsers();
+    } catch (err) {
+      alert('Error al actualizar avatar');
     }
   };
 
@@ -97,6 +114,15 @@ export default function UsersPage() {
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-t border-zinc-800">
+                <td className="p-2">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-500 text-sm font-medium">
+                      {user.name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                </td>
                 <td className="p-4">{user.name}</td>
                 <td className="p-4 text-zinc-400">{user.email}</td>
                 <td className="p-4 text-zinc-400">{user.phone || '-'}</td>
@@ -132,6 +158,36 @@ export default function UsersPage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setDetailUser(null)}>
           <div className="bg-zinc-800 rounded-lg p-6 max-w-md w-full shadow-xl space-y-3" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-lg">Detalle de usuario</h3>
+            <div className="flex items-center gap-4">
+              {detailUser.avatar_url ? (
+                <img src={detailUser.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center text-2xl text-zinc-500 font-medium">
+                  {detailUser.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="flex-1">
+                {editingAvatar ? (
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      placeholder="URL de la foto"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveAvatar}>Guardar</Button>
+                      <Button size="sm" variant="secondary" onClick={() => { setEditingAvatar(false); setAvatarUrl(detailUser.avatar_url || ''); }}>Cancelar</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="secondary" onClick={() => setEditingAvatar(true)}>
+                    {detailUser.avatar_url ? 'Cambiar foto' : 'Agregar foto'}
+                  </Button>
+                )}
+              </div>
+            </div>
             <p><span className="text-zinc-500">Nombre:</span> {detailUser.name}</p>
             <p><span className="text-zinc-500">Email:</span> {detailUser.email}</p>
             <p><span className="text-zinc-500">Teléfono:</span> {detailUser.phone || '-'}</p>

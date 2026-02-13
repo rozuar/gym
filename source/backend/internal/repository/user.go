@@ -17,8 +17,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (email, password_hash, name, phone, role, active, invitation_classes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (email, password_hash, name, phone, avatar_url, role, active, invitation_classes, birth_date, sex, weight_kg, height_cm)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at, updated_at`
 
 	return r.db.QueryRow(
@@ -27,15 +27,20 @@ func (r *UserRepository) Create(user *models.User) error {
 		user.PasswordHash,
 		user.Name,
 		user.Phone,
+		user.AvatarURL,
 		user.Role,
 		user.Active,
 		user.InvitationClasses,
+		user.BirthDate,
+		user.Sex,
+		user.WeightKg,
+		user.HeightCm,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password_hash, name, phone, role, active, invitation_classes, created_at, updated_at
+	query := `SELECT id, email, password_hash, name, phone, COALESCE(avatar_url,''), role, active, invitation_classes, birth_date, COALESCE(sex,''), COALESCE(weight_kg,0), COALESCE(height_cm,0), created_at, updated_at
 			  FROM users WHERE email = $1`
 
 	err := r.db.QueryRow(query, email).Scan(
@@ -44,9 +49,14 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 		&user.PasswordHash,
 		&user.Name,
 		&user.Phone,
+		&user.AvatarURL,
 		&user.Role,
 		&user.Active,
 		&user.InvitationClasses,
+		&user.BirthDate,
+		&user.Sex,
+		&user.WeightKg,
+		&user.HeightCm,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -58,7 +68,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 
 func (r *UserRepository) GetByID(id int64) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password_hash, name, phone, role, active, invitation_classes, created_at, updated_at
+	query := `SELECT id, email, password_hash, name, phone, COALESCE(avatar_url,''), role, active, invitation_classes, birth_date, COALESCE(sex,''), COALESCE(weight_kg,0), COALESCE(height_cm,0), created_at, updated_at
 			  FROM users WHERE id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
@@ -67,9 +77,14 @@ func (r *UserRepository) GetByID(id int64) (*models.User, error) {
 		&user.PasswordHash,
 		&user.Name,
 		&user.Phone,
+		&user.AvatarURL,
 		&user.Role,
 		&user.Active,
 		&user.InvitationClasses,
+		&user.BirthDate,
+		&user.Sex,
+		&user.WeightKg,
+		&user.HeightCm,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -82,11 +97,11 @@ func (r *UserRepository) GetByID(id int64) (*models.User, error) {
 func (r *UserRepository) Update(user *models.User) error {
 	query := `
 		UPDATE users
-		SET name = $1, phone = $2, role = $3, active = $4, invitation_classes = $5, updated_at = $6
-		WHERE id = $7`
+		SET name = $1, phone = $2, avatar_url = $3, role = $4, active = $5, invitation_classes = $6, updated_at = $7, birth_date = $8, sex = $9, weight_kg = $10, height_cm = $11
+		WHERE id = $12`
 
 	user.UpdatedAt = time.Now()
-	_, err := r.db.Exec(query, user.Name, user.Phone, user.Role, user.Active, user.InvitationClasses, user.UpdatedAt, user.ID)
+	_, err := r.db.Exec(query, user.Name, user.Phone, user.AvatarURL, user.Role, user.Active, user.InvitationClasses, user.UpdatedAt, user.BirthDate, user.Sex, user.WeightKg, user.HeightCm, user.ID)
 	return err
 }
 
@@ -101,7 +116,7 @@ func (r *UserRepository) DeleteByEmail(email string) error {
 }
 
 func (r *UserRepository) List(limit, offset int) ([]*models.User, error) {
-	query := `SELECT id, email, password_hash, name, phone, role, active, invitation_classes, created_at, updated_at
+	query := `SELECT id, email, password_hash, name, phone, COALESCE(avatar_url,''), role, active, invitation_classes, birth_date, COALESCE(sex,''), COALESCE(weight_kg,0), COALESCE(height_cm,0), created_at, updated_at
 			  FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 
 	rows, err := r.db.Query(query, limit, offset)
@@ -119,9 +134,14 @@ func (r *UserRepository) List(limit, offset int) ([]*models.User, error) {
 			&user.PasswordHash,
 			&user.Name,
 			&user.Phone,
+			&user.AvatarURL,
 			&user.Role,
 			&user.Active,
 			&user.InvitationClasses,
+			&user.BirthDate,
+			&user.Sex,
+			&user.WeightKg,
+			&user.HeightCm,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 		)

@@ -379,6 +379,34 @@ func (h *ClassHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Checked in"})
 }
 
+func (h *ClassHandler) SetBookingBeforePhoto(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	bookingID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid booking ID")
+		return
+	}
+
+	var req struct {
+		PhotoURL string `json:"photo_url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	if req.PhotoURL == "" {
+		respondError(w, http.StatusBadRequest, "photo_url is required")
+		return
+	}
+
+	if err := h.classRepo.SetBookingBeforePhoto(bookingID, userID, req.PhotoURL); err != nil {
+		respondError(w, http.StatusNotFound, "Booking not found or cannot add photo")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Photo added"})
+}
+
 func (h *ClassHandler) GetScheduleAttendance(w http.ResponseWriter, r *http.Request) {
 	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {

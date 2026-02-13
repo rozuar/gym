@@ -54,6 +54,9 @@ func (m *mockClassRepo) GenerateWeekSchedules(startDate time.Time) error {
 func (m *mockClassRepo) CreateBooking(b *models.Booking) error       { return m.createBookingErr }
 func (m *mockClassRepo) CancelBooking(bookingID, userID int64) error { return m.cancelBookingErr }
 func (m *mockClassRepo) CheckIn(bookingID int64) error               { return nil }
+func (m *mockClassRepo) SetBookingBeforePhoto(bookingID, userID int64, photoURL string) error {
+	return nil
+}
 func (m *mockClassRepo) ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error) {
 	return m.listUserBookings, m.listUserBookingsErr
 }

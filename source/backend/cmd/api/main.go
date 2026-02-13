@@ -40,6 +40,7 @@ func main() {
 
 	authService := services.NewAuthService(userRepo, cfg)
 
+	configHandler := handlers.NewConfigHandler(cfg)
 	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userRepo)
 	planHandler := handlers.NewPlanHandler(planRepo)
@@ -50,6 +51,7 @@ func main() {
 	statsHandler := handlers.NewStatsHandler(statsRepo)
 
 	// Public routes
+	mux.HandleFunc("GET /api/v1/config", configHandler.Get)
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.Refresh)
@@ -99,6 +101,7 @@ func main() {
 	mux.Handle("GET /api/v1/bookings/me", middleware.Auth(cfg)(http.HandlerFunc(classHandler.MyBookings)))
 	mux.Handle("DELETE /api/v1/bookings/{id}", middleware.Auth(cfg)(http.HandlerFunc(classHandler.CancelBooking)))
 	mux.Handle("POST /api/v1/bookings/{id}/checkin", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.CheckIn))))
+	mux.Handle("POST /api/v1/bookings/{id}/before-photo", middleware.Auth(cfg)(http.HandlerFunc(classHandler.SetBookingBeforePhoto)))
 
 	// Routines
 	mux.Handle("GET /api/v1/routines/custom", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.ListCustom))))

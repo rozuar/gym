@@ -5,6 +5,10 @@ export interface User {
   phone?: string;
   role: 'user' | 'admin';
   active: boolean;
+  birth_date?: string;
+  sex?: 'M' | 'F';
+  weight_kg?: number;
+  height_cm?: number;
   created_at: string;
 }
 

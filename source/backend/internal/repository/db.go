@@ -253,6 +253,31 @@ func Migrate(db *sql.DB) error {
 
 	-- Bookings: subscription_id nullable para reservas por invitación
 	ALTER TABLE bookings ALTER COLUMN subscription_id DROP NOT NULL;
+
+	-- Users: avatar_url (foto de perfil)
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);
+
+	-- Bookings: before_photo_url (foto antes de clase, costo adicional)
+	ALTER TABLE bookings ADD COLUMN IF NOT EXISTS before_photo_url VARCHAR(500);
+
+	-- Users: profile fields
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS sex VARCHAR(10);
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS weight_kg DECIMAL(5,2);
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS height_cm DECIMAL(5,2);
+
+	-- Authorizations table
+	CREATE TABLE IF NOT EXISTS authorizations (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		document_type VARCHAR(50) NOT NULL,
+		signed_at TIMESTAMP NOT NULL,
+		guardian_name VARCHAR(255),
+		guardian_rut VARCHAR(20),
+		notes TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_authorizations_user ON authorizations(user_id);
 	`
 
 	_, err := db.Exec(query)
