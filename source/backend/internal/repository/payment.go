@@ -36,7 +36,7 @@ func (r *PaymentRepository) Create(payment *models.Payment) error {
 
 func (r *PaymentRepository) GetByID(id int64) (*models.Payment, error) {
 	payment := &models.Payment{}
-	query := `SELECT id, user_id, plan_id, amount, currency, status, payment_method, external_id, proof_image_url, created_at, updated_at
+	query := `SELECT id, user_id, plan_id, amount, currency, status, payment_method, COALESCE(external_id,''), COALESCE(proof_image_url,''), created_at, updated_at
 			  FROM payments WHERE id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
@@ -66,7 +66,7 @@ func (r *PaymentRepository) UpdateStatus(id int64, status models.PaymentStatus) 
 
 func (r *PaymentRepository) ListByUser(userID int64, limit, offset int) ([]*models.PaymentWithDetails, error) {
 	query := `
-		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, p.external_id, p.proof_image_url, p.created_at, p.updated_at,
+		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, COALESCE(p.external_id,''), COALESCE(p.proof_image_url,''), p.created_at, p.updated_at,
 			   u.name, u.email, pl.name
 		FROM payments p
 		JOIN users u ON p.user_id = u.id
@@ -99,7 +99,7 @@ func (r *PaymentRepository) ListByUser(userID int64, limit, offset int) ([]*mode
 
 func (r *PaymentRepository) ListAll(limit, offset int) ([]*models.PaymentWithDetails, error) {
 	query := `
-		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, p.external_id, p.proof_image_url, p.created_at, p.updated_at,
+		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, COALESCE(p.external_id,''), COALESCE(p.proof_image_url,''), p.created_at, p.updated_at,
 			   u.name, u.email, pl.name
 		FROM payments p
 		JOIN users u ON p.user_id = u.id
