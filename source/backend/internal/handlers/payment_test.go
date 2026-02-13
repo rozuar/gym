@@ -13,6 +13,25 @@ import (
 	"boxmagic/internal/models"
 )
 
+type mockPaymentUserRepo struct {
+	user *models.User
+	err  error
+}
+
+func (m *mockPaymentUserRepo) Create(user *models.User) error                 { return nil }
+func (m *mockPaymentUserRepo) GetByEmail(email string) (*models.User, error)  { return m.user, m.err }
+func (m *mockPaymentUserRepo) GetByID(id int64) (*models.User, error)         { return m.user, m.err }
+func (m *mockPaymentUserRepo) Update(user *models.User) error                 { return nil }
+func (m *mockPaymentUserRepo) Delete(id int64) error                          { return nil }
+func (m *mockPaymentUserRepo) List(limit, offset int) ([]*models.User, error) { return nil, nil }
+func (m *mockPaymentUserRepo) SaveRefreshToken(userID int64, token string, expiresAt time.Time) error {
+	return nil
+}
+func (m *mockPaymentUserRepo) GetRefreshToken(token string) (int64, error)        { return 0, nil }
+func (m *mockPaymentUserRepo) DeleteRefreshToken(token string) error              { return nil }
+func (m *mockPaymentUserRepo) AddInvitationClasses(userID int64, count int) error { return nil }
+func (m *mockPaymentUserRepo) UseInvitationClass(userID int64) (bool, error)      { return true, nil }
+
 type mockPaymentRepo struct {
 	createErr                error
 	updateStatusErr          error
@@ -60,7 +79,7 @@ func (m *mockPlanRepo) List(activeOnly bool) ([]*models.Plan, error) { return ni
 func (m *mockPlanRepo) Update(plan *models.Plan) error               { return nil }
 func (m *mockPlanRepo) Delete(id int64) error                        { return nil }
 
-func requestWithAuth(r *http.Request, userID int64) *http.Request {
+func paymentRequestWithAuth(r *http.Request, userID int64) *http.Request {
 	ctx := middleware.WithAuth(r.Context(), userID, models.RoleUser)
 	return r.WithContext(ctx)
 }
@@ -68,11 +87,12 @@ func requestWithAuth(r *http.Request, userID int64) *http.Request {
 func TestPaymentHandler_Create_InvalidBody(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{user: &models.User{ID: 1}}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
 	req := httptest.NewRequest("POST", "/api/v1/payments", bytes.NewReader([]byte("invalid")))
 	req.Header.Set("Content-Type", "application/json")
-	req = requestWithAuth(req, 1)
+	req = adminRequestWithAuth(req)
 	rr := httptest.NewRecorder()
 
 	handler.Create(rr, req)
@@ -85,12 +105,13 @@ func TestPaymentHandler_Create_InvalidBody(t *testing.T) {
 func TestPaymentHandler_Create_PlanIDRequired(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{user: &models.User{ID: 1}}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
-	body := `{"payment_method":"card"}`
+	body := `{"payment_method":"efectivo"}`
 	req := httptest.NewRequest("POST", "/api/v1/payments", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
-	req = requestWithAuth(req, 1)
+	req = adminRequestWithAuth(req)
 	rr := httptest.NewRecorder()
 
 	handler.Create(rr, req)
@@ -103,12 +124,13 @@ func TestPaymentHandler_Create_PlanIDRequired(t *testing.T) {
 func TestPaymentHandler_Create_PlanNotFound(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{getByIDErr: errors.New("not found")}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{user: &models.User{ID: 1}}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
-	body := `{"plan_id":999,"payment_method":"card"}`
+	body := `{"user_id":1,"plan_id":999,"payment_method":"efectivo"}`
 	req := httptest.NewRequest("POST", "/api/v1/payments", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
-	req = requestWithAuth(req, 1)
+	req = adminRequestWithAuth(req)
 	rr := httptest.NewRecorder()
 
 	handler.Create(rr, req)
@@ -122,12 +144,13 @@ func TestPaymentHandler_Create_PlanInactive(t *testing.T) {
 	plan := &models.Plan{ID: 1, Name: "Test", Price: 10000, Currency: "CLP", Duration: 30, MaxClasses: 0, Active: false}
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{getByIDPlan: plan}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{user: &models.User{ID: 1}}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
-	body := `{"plan_id":1,"payment_method":"card"}`
+	body := `{"user_id":1,"plan_id":1,"payment_method":"efectivo"}`
 	req := httptest.NewRequest("POST", "/api/v1/payments", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
-	req = requestWithAuth(req, 1)
+	req = adminRequestWithAuth(req)
 	rr := httptest.NewRecorder()
 
 	handler.Create(rr, req)
@@ -141,12 +164,13 @@ func TestPaymentHandler_Create_Success(t *testing.T) {
 	plan := &models.Plan{ID: 1, Name: "Test", Price: 10000, Currency: "CLP", Duration: 30, MaxClasses: 0, Active: true}
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{getByIDPlan: plan}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{user: &models.User{ID: 1}}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
-	body := `{"plan_id":1,"payment_method":"card"}`
+	body := `{"user_id":1,"plan_id":1,"payment_method":"efectivo"}`
 	req := httptest.NewRequest("POST", "/api/v1/payments", bytes.NewReader([]byte(body)))
 	req.Header.Set("Content-Type", "application/json")
-	req = requestWithAuth(req, 1)
+	req = adminRequestWithAuth(req)
 	rr := httptest.NewRecorder()
 
 	handler.Create(rr, req)
@@ -166,10 +190,11 @@ func TestPaymentHandler_Create_Success(t *testing.T) {
 func TestPaymentHandler_MyPayments_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
 	req := httptest.NewRequest("GET", "/api/v1/payments/me", nil)
-	req = requestWithAuth(req, 1)
+	req = paymentRequestWithAuth(req, 1)
 	rr := httptest.NewRecorder()
 
 	handler.MyPayments(rr, req)
@@ -182,10 +207,11 @@ func TestPaymentHandler_MyPayments_Success(t *testing.T) {
 func TestPaymentHandler_MySubscription_NoActive(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{getActiveSubscriptionErr: errors.New("none")}
 	planRepo := &mockPlanRepo{}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
 	req := httptest.NewRequest("GET", "/api/v1/subscriptions/me", nil)
-	req = requestWithAuth(req, 1)
+	req = paymentRequestWithAuth(req, 1)
 	rr := httptest.NewRecorder()
 
 	handler.MySubscription(rr, req)
@@ -210,10 +236,11 @@ func TestPaymentHandler_MySubscription_WithActive(t *testing.T) {
 	}
 	paymentRepo := &mockPaymentRepo{getActiveSubscription: sub}
 	planRepo := &mockPlanRepo{}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
 	req := httptest.NewRequest("GET", "/api/v1/subscriptions/me", nil)
-	req = requestWithAuth(req, 1)
+	req = paymentRequestWithAuth(req, 1)
 	rr := httptest.NewRecorder()
 
 	handler.MySubscription(rr, req)
@@ -226,10 +253,11 @@ func TestPaymentHandler_MySubscription_WithActive(t *testing.T) {
 func TestPaymentHandler_ListAll_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	planRepo := &mockPlanRepo{}
-	handler := NewPaymentHandler(paymentRepo, planRepo)
+	userRepo := &mockPaymentUserRepo{}
+	handler := NewPaymentHandler(paymentRepo, planRepo, userRepo)
 
 	req := httptest.NewRequest("GET", "/api/v1/payments", nil)
-	req = requestWithAuth(req, 1)
+	req = adminRequestWithAuth(req)
 	rr := httptest.NewRecorder()
 
 	handler.ListAll(rr, req)

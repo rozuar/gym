@@ -17,6 +17,8 @@ type UserRepo interface {
 	SaveRefreshToken(userID int64, token string, expiresAt time.Time) error
 	GetRefreshToken(token string) (int64, error)
 	DeleteRefreshToken(token string) error
+	AddInvitationClasses(userID int64, count int) error
+	UseInvitationClass(userID int64) (bool, error)
 }
 
 type PlanRepo interface {

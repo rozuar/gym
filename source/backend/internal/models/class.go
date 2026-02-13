@@ -41,8 +41,8 @@ type Booking struct {
 	ID              int64      `json:"id"`
 	UserID          int64      `json:"user_id"`
 	ClassScheduleID int64      `json:"class_schedule_id"`
-	SubscriptionID  int64      `json:"subscription_id"`
-	Status          string     `json:"status"` // booked, attended, cancelled, no_show
+	SubscriptionID  *int64     `json:"subscription_id,omitempty"` // null para reservas por invitación
+	Status          string     `json:"status"`                    // booked, attended, cancelled, no_show
 	CheckedInAt     *time.Time `json:"checked_in_at,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 }

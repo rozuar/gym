@@ -17,8 +17,8 @@ func NewPaymentRepository(db *sql.DB) *PaymentRepository {
 
 func (r *PaymentRepository) Create(payment *models.Payment) error {
 	query := `
-		INSERT INTO payments (user_id, plan_id, amount, currency, status, payment_method, external_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO payments (user_id, plan_id, amount, currency, status, payment_method, external_id, proof_image_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at`
 
 	return r.db.QueryRow(
@@ -30,12 +30,13 @@ func (r *PaymentRepository) Create(payment *models.Payment) error {
 		payment.Status,
 		payment.PaymentMethod,
 		payment.ExternalID,
+		payment.ProofImageURL,
 	).Scan(&payment.ID, &payment.CreatedAt, &payment.UpdatedAt)
 }
 
 func (r *PaymentRepository) GetByID(id int64) (*models.Payment, error) {
 	payment := &models.Payment{}
-	query := `SELECT id, user_id, plan_id, amount, currency, status, payment_method, external_id, created_at, updated_at
+	query := `SELECT id, user_id, plan_id, amount, currency, status, payment_method, external_id, proof_image_url, created_at, updated_at
 			  FROM payments WHERE id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
@@ -47,6 +48,7 @@ func (r *PaymentRepository) GetByID(id int64) (*models.Payment, error) {
 		&payment.Status,
 		&payment.PaymentMethod,
 		&payment.ExternalID,
+		&payment.ProofImageURL,
 		&payment.CreatedAt,
 		&payment.UpdatedAt,
 	)
@@ -64,7 +66,7 @@ func (r *PaymentRepository) UpdateStatus(id int64, status models.PaymentStatus) 
 
 func (r *PaymentRepository) ListByUser(userID int64, limit, offset int) ([]*models.PaymentWithDetails, error) {
 	query := `
-		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, p.external_id, p.created_at, p.updated_at,
+		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, p.external_id, p.proof_image_url, p.created_at, p.updated_at,
 			   u.name, u.email, pl.name
 		FROM payments p
 		JOIN users u ON p.user_id = u.id
@@ -84,7 +86,7 @@ func (r *PaymentRepository) ListByUser(userID int64, limit, offset int) ([]*mode
 		p := &models.PaymentWithDetails{}
 		err := rows.Scan(
 			&p.ID, &p.UserID, &p.PlanID, &p.Amount, &p.Currency, &p.Status,
-			&p.PaymentMethod, &p.ExternalID, &p.CreatedAt, &p.UpdatedAt,
+			&p.PaymentMethod, &p.ExternalID, &p.ProofImageURL, &p.CreatedAt, &p.UpdatedAt,
 			&p.UserName, &p.UserEmail, &p.PlanName,
 		)
 		if err != nil {
@@ -97,7 +99,7 @@ func (r *PaymentRepository) ListByUser(userID int64, limit, offset int) ([]*mode
 
 func (r *PaymentRepository) ListAll(limit, offset int) ([]*models.PaymentWithDetails, error) {
 	query := `
-		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, p.external_id, p.created_at, p.updated_at,
+		SELECT p.id, p.user_id, p.plan_id, p.amount, p.currency, p.status, p.payment_method, p.external_id, p.proof_image_url, p.created_at, p.updated_at,
 			   u.name, u.email, pl.name
 		FROM payments p
 		JOIN users u ON p.user_id = u.id
@@ -116,7 +118,7 @@ func (r *PaymentRepository) ListAll(limit, offset int) ([]*models.PaymentWithDet
 		p := &models.PaymentWithDetails{}
 		err := rows.Scan(
 			&p.ID, &p.UserID, &p.PlanID, &p.Amount, &p.Currency, &p.Status,
-			&p.PaymentMethod, &p.ExternalID, &p.CreatedAt, &p.UpdatedAt,
+			&p.PaymentMethod, &p.ExternalID, &p.ProofImageURL, &p.CreatedAt, &p.UpdatedAt,
 			&p.UserName, &p.UserEmail, &p.PlanName,
 		)
 		if err != nil {
@@ -150,13 +152,15 @@ func (r *PaymentRepository) CreateSubscription(sub *models.Subscription) error {
 
 func (r *PaymentRepository) GetActiveSubscription(userID int64) (*models.SubscriptionWithPlan, error) {
 	sub := &models.SubscriptionWithPlan{}
+	// Incluye periodo de gracia: bloqueo desde día 6. end_date + 5 días >= hoy => puede reservar
 	query := `
 		SELECT s.id, s.user_id, s.plan_id, s.payment_id, s.start_date, s.end_date,
 			   s.classes_used, s.classes_allowed, s.active, s.created_at,
 			   p.name, p.price
 		FROM subscriptions s
 		JOIN plans p ON s.plan_id = p.id
-		WHERE s.user_id = $1 AND s.active = true AND s.end_date > NOW()
+		WHERE s.user_id = $1 AND s.active = true
+		  AND s.end_date >= CURRENT_DATE - INTERVAL '5 days'
 		ORDER BY s.end_date DESC
 		LIMIT 1`
 

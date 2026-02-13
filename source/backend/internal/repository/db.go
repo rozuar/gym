@@ -244,6 +244,15 @@ func Migrate(db *sql.DB) error {
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS billable BOOLEAN DEFAULT false;
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS target_user_id INTEGER REFERENCES users(id);
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT false;
+
+	-- Payments: proof_image_url (transferencia)
+	ALTER TABLE payments ADD COLUMN IF NOT EXISTS proof_image_url VARCHAR(500);
+
+	-- Users: invitation_classes (1 clase invitación)
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS invitation_classes INTEGER DEFAULT 0;
+
+	-- Bookings: subscription_id nullable para reservas por invitación
+	ALTER TABLE bookings ALTER COLUMN subscription_id DROP NOT NULL;
 	`
 
 	_, err := db.Exec(query)

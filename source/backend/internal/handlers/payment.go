@@ -14,26 +14,42 @@ import (
 type PaymentHandler struct {
 	paymentRepo repository.PaymentRepo
 	planRepo    repository.PlanRepo
+	userRepo    repository.UserRepo
 }
 
-func NewPaymentHandler(paymentRepo repository.PaymentRepo, planRepo repository.PlanRepo) *PaymentHandler {
+func NewPaymentHandler(paymentRepo repository.PaymentRepo, planRepo repository.PlanRepo, userRepo repository.UserRepo) *PaymentHandler {
 	return &PaymentHandler{
 		paymentRepo: paymentRepo,
 		planRepo:    planRepo,
+		userRepo:    userRepo,
 	}
 }
 
+// Create - Solo admin registra pagos (efectivo, débito, transferencia). Transferencia requiere proof_image_url.
 func (h *PaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r.Context())
-
 	var req models.CreatePaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	if req.PlanID <= 0 {
-		respondError(w, http.StatusBadRequest, "Plan ID is required")
+	if req.UserID <= 0 || req.PlanID <= 0 {
+		respondError(w, http.StatusBadRequest, "user_id and plan_id are required")
+		return
+	}
+
+	// Validar método de pago: efectivo, debito, transferencia
+	if !models.ValidPaymentMethods[req.PaymentMethod] {
+		respondError(w, http.StatusBadRequest, "payment_method must be efectivo, debito or transferencia")
+		return
+	}
+	if req.PaymentMethod == models.PaymentMethodTransferencia && req.ProofImageURL == "" {
+		respondError(w, http.StatusBadRequest, "proof_image_url is required for transferencia")
+		return
+	}
+
+	if _, err := h.userRepo.GetByID(req.UserID); err != nil {
+		respondError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
@@ -42,19 +58,19 @@ func (h *PaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusNotFound, "Plan not found")
 		return
 	}
-
 	if !plan.Active {
 		respondError(w, http.StatusBadRequest, "Plan is not active")
 		return
 	}
 
 	payment := &models.Payment{
-		UserID:        userID,
+		UserID:        req.UserID,
 		PlanID:        plan.ID,
 		Amount:        plan.Price,
 		Currency:      plan.Currency,
-		Status:        models.PaymentPending,
+		Status:        models.PaymentCompleted,
 		PaymentMethod: req.PaymentMethod,
+		ProofImageURL: req.ProofImageURL,
 	}
 
 	if err := h.paymentRepo.Create(payment); err != nil {
@@ -62,17 +78,11 @@ func (h *PaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.paymentRepo.UpdateStatus(payment.ID, models.PaymentCompleted); err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to process payment")
-		return
-	}
-	payment.Status = models.PaymentCompleted
-
 	startDate := time.Now()
 	endDate := startDate.AddDate(0, 0, plan.Duration)
 
 	subscription := &models.Subscription{
-		UserID:         userID,
+		UserID:         req.UserID,
 		PlanID:         plan.ID,
 		PaymentID:      payment.ID,
 		StartDate:      startDate,

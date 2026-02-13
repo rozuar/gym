@@ -325,7 +325,7 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				if schedules[i].Date.Before(todayStart) {
 					continue
 				}
-				b := &models.Booking{UserID: userID, ClassScheduleID: schedules[i].ID, SubscriptionID: subID}
+				b := &models.Booking{UserID: userID, ClassScheduleID: schedules[i].ID, SubscriptionID: &subID}
 				if classRepo.CreateBooking(b) == nil {
 					booked++
 				}

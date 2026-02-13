@@ -135,12 +135,45 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Role != "" {
 		user.Role = req.Role
 	}
+	if req.InvitationClasses != nil {
+		user.InvitationClasses = *req.InvitationClasses
+	}
 
 	if err := h.userRepo.Update(user); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
+	respondJSON(w, http.StatusOK, user)
+}
+
+func (h *UserHandler) AddInvitation(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	var req models.AddInvitationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	if req.Count <= 0 {
+		req.Count = 1
+	}
+
+	if _, err := h.userRepo.GetByID(id); err != nil {
+		respondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	if err := h.userRepo.AddInvitationClasses(id, req.Count); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to add invitation")
+		return
+	}
+
+	user, _ := h.userRepo.GetByID(id)
 	respondJSON(w, http.StatusOK, user)
 }
 

@@ -15,13 +15,15 @@ type ClassHandler struct {
 	classRepo      repository.ClassRepo
 	paymentRepo    repository.PaymentRepo
 	instructorRepo repository.InstructorRepo
+	userRepo       repository.UserRepo
 }
 
-func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.PaymentRepo, instructorRepo repository.InstructorRepo) *ClassHandler {
+func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.PaymentRepo, instructorRepo repository.InstructorRepo, userRepo repository.UserRepo) *ClassHandler {
 	return &ClassHandler{
 		classRepo:      classRepo,
 		paymentRepo:    paymentRepo,
 		instructorRepo: instructorRepo,
+		userRepo:       userRepo,
 	}
 }
 
@@ -287,21 +289,33 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subscription, err := h.paymentRepo.GetActiveSubscription(userID)
-	if err != nil {
-		respondError(w, http.StatusForbidden, "No active subscription")
-		return
-	}
-
-	if subscription.ClassesAllowed > 0 && subscription.ClassesUsed >= subscription.ClassesAllowed {
-		respondError(w, http.StatusForbidden, "Class limit reached")
-		return
+	useInvitation := false
+	if err != nil || subscription == nil {
+		// Sin suscripción activa (o bloqueado día 6+): verificar invitación
+		user, uErr := h.userRepo.GetByID(userID)
+		if uErr != nil || user == nil || user.InvitationClasses <= 0 {
+			respondError(w, http.StatusForbidden, "No active subscription")
+			return
+		}
+		useInvitation = true
+	} else if subscription.ClassesAllowed > 0 && subscription.ClassesUsed >= subscription.ClassesAllowed {
+		// Límite de clases alcanzado: verificar invitación
+		user, uErr := h.userRepo.GetByID(userID)
+		if uErr != nil || user == nil || user.InvitationClasses <= 0 {
+			respondError(w, http.StatusForbidden, "Class limit reached")
+			return
+		}
+		useInvitation = true
 	}
 
 	booking := &models.Booking{
 		UserID:          userID,
 		ClassScheduleID: scheduleID,
-		SubscriptionID:  subscription.ID,
 		Status:          "booked",
+	}
+	if subscription != nil && !useInvitation {
+		subID := subscription.ID
+		booking.SubscriptionID = &subID
 	}
 
 	if err := h.classRepo.CreateBooking(booking); err != nil {
@@ -309,7 +323,11 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.paymentRepo.IncrementClassesUsed(subscription.ID)
+	if useInvitation {
+		h.userRepo.UseInvitationClass(userID)
+	} else if subscription != nil {
+		h.paymentRepo.IncrementClassesUsed(subscription.ID)
+	}
 
 	respondJSON(w, http.StatusCreated, booking)
 }

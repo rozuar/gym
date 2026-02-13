@@ -247,10 +247,14 @@ func (r *ClassRepository) CreateBooking(b *models.Booking) error {
 		return sql.ErrNoRows // No space
 	}
 
-	// Create booking
+	// Create booking (subscription_id puede ser NULL para invitaciones)
+	subID := sql.NullInt64{Valid: false}
+	if b.SubscriptionID != nil {
+		subID = sql.NullInt64{Int64: *b.SubscriptionID, Valid: true}
+	}
 	query := `INSERT INTO bookings (user_id, class_schedule_id, subscription_id, status)
 			  VALUES ($1, $2, $3, 'booked') RETURNING id, created_at`
-	err = tx.QueryRow(query, b.UserID, b.ClassScheduleID, b.SubscriptionID).Scan(&b.ID, &b.CreatedAt)
+	err = tx.QueryRow(query, b.UserID, b.ClassScheduleID, subID).Scan(&b.ID, &b.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -314,11 +318,15 @@ func (r *ClassRepository) ListUserBookings(userID int64, upcoming bool) ([]*mode
 	var bookings []*models.BookingWithDetails
 	for rows.Next() {
 		b := &models.BookingWithDetails{}
+		var subID sql.NullInt64
 		if err := rows.Scan(
-			&b.ID, &b.UserID, &b.ClassScheduleID, &b.SubscriptionID, &b.Status, &b.CheckedInAt, &b.CreatedAt,
+			&b.ID, &b.UserID, &b.ClassScheduleID, &subID, &b.Status, &b.CheckedInAt, &b.CreatedAt,
 			&b.ClassName, &b.DisciplineName, &b.ScheduleDate, &b.StartTime,
 		); err != nil {
 			return nil, err
+		}
+		if subID.Valid {
+			b.SubscriptionID = &subID.Int64
 		}
 		bookings = append(bookings, b)
 	}
@@ -338,8 +346,12 @@ func (r *ClassRepository) GetScheduleBookings(scheduleID int64) ([]*models.Booki
 	var bookings []*models.Booking
 	for rows.Next() {
 		b := &models.Booking{}
-		if err := rows.Scan(&b.ID, &b.UserID, &b.ClassScheduleID, &b.SubscriptionID, &b.Status, &b.CheckedInAt, &b.CreatedAt); err != nil {
+		var subID sql.NullInt64
+		if err := rows.Scan(&b.ID, &b.UserID, &b.ClassScheduleID, &subID, &b.Status, &b.CheckedInAt, &b.CreatedAt); err != nil {
 			return nil, err
+		}
+		if subID.Valid {
+			b.SubscriptionID = &subID.Int64
 		}
 		bookings = append(bookings, b)
 	}

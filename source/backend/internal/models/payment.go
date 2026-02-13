@@ -13,6 +13,16 @@ const (
 	PaymentRefunded  PaymentStatus = "refunded"
 )
 
+const (
+	PaymentMethodEfectivo      = "efectivo"
+	PaymentMethodDebito        = "debito"
+	PaymentMethodTransferencia = "transferencia"
+)
+
+var ValidPaymentMethods = map[string]bool{
+	PaymentMethodEfectivo: true, PaymentMethodDebito: true, PaymentMethodTransferencia: true,
+}
+
 type Payment struct {
 	ID            int64         `json:"id"`
 	UserID        int64         `json:"user_id"`
@@ -22,6 +32,7 @@ type Payment struct {
 	Status        PaymentStatus `json:"status"`
 	PaymentMethod string        `json:"payment_method,omitempty"`
 	ExternalID    string        `json:"external_id,omitempty"`
+	ProofImageURL string        `json:"proof_image_url,omitempty"` // Para transferencia: URL de comprobante
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 }
@@ -40,19 +51,21 @@ type Subscription struct {
 }
 
 type CreatePaymentRequest struct {
+	UserID        int64  `json:"user_id"` // Admin registra pago para este usuario
 	PlanID        int64  `json:"plan_id"`
-	PaymentMethod string `json:"payment_method"`
+	PaymentMethod string `json:"payment_method"`  // efectivo, debito, transferencia
+	ProofImageURL string `json:"proof_image_url"` // Opcional; obligatorio para transferencia
 }
 
 type PaymentWithDetails struct {
 	Payment
-	UserName string `json:"user_name"`
+	UserName  string `json:"user_name"`
 	UserEmail string `json:"user_email"`
-	PlanName string `json:"plan_name"`
+	PlanName  string `json:"plan_name"`
 }
 
 type SubscriptionWithPlan struct {
 	Subscription
-	PlanName    string `json:"plan_name"`
-	PlanPrice   int64  `json:"plan_price"`
+	PlanName  string `json:"plan_name"`
+	PlanPrice int64  `json:"plan_price"`
 }

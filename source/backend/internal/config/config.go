@@ -2,29 +2,35 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"time"
 )
 
 type Config struct {
-	Port               string
-	DatabaseURL        string
-	JWTSecret          string
-	JWTExpiry          time.Duration
-	RefreshTokenExpiry time.Duration
-	Environment        string
+	Port                 string
+	DatabaseURL          string
+	JWTSecret            string
+	JWTExpiry            time.Duration
+	RefreshTokenExpiry   time.Duration
+	Environment          string
+	InvitationClassPrice int64 // Valor CLP de 1 clase invitación (variable global)
 }
 
 func Load() *Config {
-	// Railway uses PORT, but we also support API_PORT for flexibility
 	port := getEnv("PORT", getEnv("API_PORT", "8080"))
+	invPrice, _ := strconv.ParseInt(getEnv("INVITATION_CLASS_PRICE", "15000"), 10, 64)
+	if invPrice <= 0 {
+		invPrice = 15000
+	}
 
 	return &Config{
-		Port:               port,
-		DatabaseURL:        getEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/boxmagic?sslmode=disable"),
-		JWTSecret:          getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		JWTExpiry:          parseDuration(getEnv("JWT_EXPIRY", "24h")),
-		RefreshTokenExpiry: parseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "168h")),
-		Environment:        getEnv("API_ENV", "development"),
+		Port:                 port,
+		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/boxmagic?sslmode=disable"),
+		JWTSecret:            getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		JWTExpiry:            parseDuration(getEnv("JWT_EXPIRY", "24h")),
+		RefreshTokenExpiry:   parseDuration(getEnv("REFRESH_TOKEN_EXPIRY", "168h")),
+		Environment:          getEnv("API_ENV", "development"),
+		InvitationClassPrice: invPrice,
 	}
 }
 
