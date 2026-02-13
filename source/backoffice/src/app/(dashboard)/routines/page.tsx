@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-const TABS = ['Biblioteca', 'Asignar a Horario', 'Personalizadas'] as const;
+const TABS = ['Biblioteca', 'Asignar', 'Personalizadas'] as const;
 type Tab = (typeof TABS)[number];
 
 const TYPE_LABELS: Record<string, string> = { wod: 'WOD', strength: 'Fuerza', skill: 'Skill', cardio: 'Cardio' };
@@ -36,7 +36,7 @@ export default function RoutinesPage() {
       </div>
 
       {tab === 'Biblioteca' && <BibliotecaTab />}
-      {tab === 'Asignar a Horario' && <AsignarTab />}
+      {tab === 'Asignar' && <AsignarTab />}
       {tab === 'Personalizadas' && <PersonalizadasTab />}
     </div>
   );
@@ -51,6 +51,9 @@ function BibliotecaTab() {
   const [form, setForm] = useState(emptyForm);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [filterType, setFilterType] = useState('');
+  const [filterDifficulty, setFilterDifficulty] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'porTipo' | 'lista'>('porTipo');
   const [instructors, setInstructors] = useState<any[]>([]);
 
   const load = useCallback(async () => {
@@ -65,6 +68,33 @@ function BibliotecaTab() {
   }, [filterType]);
 
   useEffect(() => { load(); }, [load]);
+
+  const filteredRoutines = useMemo(() => {
+    return routines.filter((r) => {
+      if (filterDifficulty && r.difficulty !== filterDifficulty) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchName = (r.name || '').toLowerCase().includes(q);
+        const matchContent = (r.content || '').toLowerCase().includes(q);
+        const matchDesc = (r.description || '').toLowerCase().includes(q);
+        if (!matchName && !matchContent && !matchDesc) return false;
+      }
+      return true;
+    });
+  }, [routines, filterDifficulty, searchQuery]);
+
+  const routinesByType = useMemo(() => {
+    const order = ['wod', 'strength', 'skill', 'cardio'];
+    const byType: Record<string, any[]> = {};
+    order.forEach((t) => { byType[t] = []; });
+    filteredRoutines.forEach((r) => {
+      const t = r.type || 'wod';
+      if (!byType[t]) byType[t] = [];
+      byType[t].push(r);
+    });
+    Object.values(byType).forEach((arr) => arr.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+    return byType;
+  }, [filteredRoutines]);
 
   useEffect(() => {
     api.getInstructors().then((d: any) => setInstructors(d.instructors || d || [])).catch(() => {});
@@ -180,21 +210,69 @@ function BibliotecaTab() {
     </Card>
   );
 
+  const RoutineCard = ({ routine }: { routine: any }) => (
+    <Card className="flex flex-col">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-semibold">{routine.name}</h3>
+        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded shrink-0">{TYPE_LABELS[routine.type] || routine.type}</span>
+      </div>
+      {routine.description && <p className="text-sm text-zinc-400 mb-2 line-clamp-2">{routine.description}</p>}
+      <pre className="text-sm text-zinc-400 whitespace-pre-wrap mb-2 max-h-24 overflow-y-auto flex-1">{routine.content}</pre>
+      <div className="flex gap-2 text-xs text-zinc-500 mb-3">
+        {routine.duration > 0 && <span>{routine.duration} min</span>}
+        {routine.difficulty && <span>{DIFFICULTY_LABELS[routine.difficulty] || routine.difficulty}</span>}
+        {routine.instructor_name && <span>Instructor: {routine.instructor_name}</span>}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <Button size="sm" variant="secondary" onClick={() => openEdit(routine)}>Editar</Button>
+        <Button size="sm" variant="danger" onClick={() => handleDelete(routine.id)} loading={deletingId === routine.id}>Eliminar</Button>
+      </div>
+    </Card>
+  );
+
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            type="text"
+            placeholder="Buscar por nombre..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm w-48"
+          />
           <select
             className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
             <option value="">Todos los tipos</option>
-            <option value="wod">WOD</option>
-            <option value="strength">Fuerza</option>
-            <option value="skill">Skill</option>
-            <option value="cardio">Cardio</option>
+            {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
+          <select
+            className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
+            value={filterDifficulty}
+            onChange={(e) => setFilterDifficulty(e.target.value)}
+          >
+            <option value="">Todas las dificultades</option>
+            {Object.entries(DIFFICULTY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('porTipo')}
+              className={`px-3 py-2 text-sm ${viewMode === 'porTipo' ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+            >
+              Por tipo
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('lista')}
+              className={`px-3 py-2 text-sm ${viewMode === 'lista' ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+            >
+              Lista
+            </button>
+          </div>
         </div>
         {!showForm && !editingId && (
           <Button onClick={() => setShowForm(true)}>Nueva Rutina</Button>
@@ -203,28 +281,34 @@ function BibliotecaTab() {
 
       {(showForm || editingId) && formUI}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {routines.map((routine) => (
-          <Card key={routine.id}>
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-semibold">{routine.name}</h3>
-              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">{TYPE_LABELS[routine.type] || routine.type}</span>
-            </div>
-            {routine.description && <p className="text-sm text-zinc-400 mb-2">{routine.description}</p>}
-            <pre className="text-sm text-zinc-400 whitespace-pre-wrap mb-2 max-h-32 overflow-y-auto">{routine.content}</pre>
-            <div className="flex gap-2 text-xs text-zinc-500 mb-3">
-              {routine.duration > 0 && <span>{routine.duration} min</span>}
-              {routine.difficulty && <span>{DIFFICULTY_LABELS[routine.difficulty] || routine.difficulty}</span>}
-              {routine.instructor_name && <span>Instructor: {routine.instructor_name}</span>}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button size="sm" variant="secondary" onClick={() => openEdit(routine)}>Editar</Button>
-              <Button size="sm" variant="danger" onClick={() => handleDelete(routine.id)} loading={deletingId === routine.id}>Eliminar</Button>
-            </div>
-          </Card>
-        ))}
-        {routines.length === 0 && <p className="text-zinc-500 col-span-2">No hay rutinas en la biblioteca.</p>}
-      </div>
+      {viewMode === 'porTipo' ? (
+        <div className="space-y-6">
+          {(['wod', 'strength', 'skill', 'cardio'] as const).map((typeKey) => {
+            const items = routinesByType[typeKey] || [];
+            if (items.length === 0) return null;
+            return (
+              <div key={typeKey}>
+                <h3 className="text-lg font-semibold text-zinc-200 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  {TYPE_LABELS[typeKey]}
+                  <span className="text-sm font-normal text-zinc-500">({items.length})</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {items.map((r) => <RoutineCard key={r.id} routine={r} />)}
+                </div>
+              </div>
+            );
+          })}
+          {filteredRoutines.length === 0 && (
+            <p className="text-zinc-500 py-8 text-center">No hay rutinas con los filtros actuales.</p>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredRoutines.map((routine) => <RoutineCard key={routine.id} routine={routine} />)}
+          {filteredRoutines.length === 0 && <p className="text-zinc-500 col-span-full py-8 text-center">No hay rutinas en la biblioteca.</p>}
+        </div>
+      )}
     </>
   );
 }
@@ -310,25 +394,46 @@ function AsignarTab() {
 
   if (loading) return <div className="animate-pulse">Cargando horarios...</div>;
 
-  // Group schedules by date
-  const grouped: Record<string, any[]> = {};
-  schedules.forEach((s) => {
-    const date = s.date?.slice(0, 10) || 'Sin fecha';
-    if (!grouped[date]) grouped[date] = [];
-    grouped[date].push(s);
-  });
-
   const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+  // Group schedules by date, sort chronologically
+  const grouped = useMemo(() => {
+    const g: Record<string, any[]> = {};
+    schedules.forEach((s) => {
+      const date = s.date?.slice(0, 10) || 'Sin fecha';
+      if (!g[date]) g[date] = [];
+      g[date].push(s);
+    });
+    Object.values(g).forEach((arr) => arr.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')));
+    return g;
+  }, [schedules]);
+
+  const sortedDates = Object.keys(grouped).sort();
+
+  // Group routines by type for dropdown
+  const routinesByType = useMemo(() => {
+    const order = ['wod', 'strength', 'skill', 'cardio'];
+    const byType: Record<string, any[]> = {};
+    order.forEach((t) => { byType[t] = []; });
+    routines.forEach((r) => {
+      const t = r.type || 'wod';
+      if (!byType[t]) byType[t] = [];
+      byType[t].push(r);
+    });
+    return byType;
+  }, [routines]);
 
   return (
     <>
-      {Object.entries(grouped).map(([date, scheds]) => {
+      {sortedDates.map((date) => {
+        const scheds = grouped[date];
         const d = new Date(date + 'T12:00:00');
         const dayName = DAYS[d.getDay()];
+        const dateFormatted = d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
         return (
           <div key={date} className="mb-6">
             <h3 className="text-lg font-semibold mb-3 text-zinc-300">
-              {dayName} {date}
+              {dayName} {dateFormatted}
             </h3>
             <div className="space-y-3">
               {scheds.map((s) => {
@@ -370,11 +475,17 @@ function AsignarTab() {
                             onChange={(e) => setSelectedRoutineId(e.target.value)}
                           >
                             <option value="">Seleccionar rutina...</option>
-                            {routines.map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name} ({TYPE_LABELS[r.type] || r.type})
-                              </option>
-                            ))}
+                            {(['wod', 'strength', 'skill', 'cardio'] as const).map((typeKey) => {
+                              const items = routinesByType[typeKey] || [];
+                              if (items.length === 0) return null;
+                              return (
+                                <optgroup key={typeKey} label={TYPE_LABELS[typeKey]}>
+                                  {items.map((r) => (
+                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                  ))}
+                                </optgroup>
+                              );
+                            })}
                           </select>
                         </div>
                         <Input label="Notas (opcional)" value={assignNotes} onChange={(e) => setAssignNotes(e.target.value)} />
@@ -423,6 +534,32 @@ function PersonalizadasTab() {
   }, [filterUserId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const [filterType, setFilterType] = useState('');
+
+  const routinesByUser = useMemo(() => {
+    const byUser: Record<number, { name: string; routines: any[] }> = {};
+    routines.forEach((r) => {
+      const uid = r.target_user_id;
+      const uname = r.target_user_name || `Usuario ${uid}`;
+      if (!byUser[uid]) byUser[uid] = { name: uname, routines: [] };
+      byUser[uid].routines.push(r);
+    });
+    Object.values(byUser).forEach((g) =>
+      g.routines.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    );
+    return byUser;
+  }, [routines]);
+
+  const filteredByType = useMemo(() => {
+    if (!filterType) return routinesByUser;
+    const out: typeof routinesByUser = {};
+    Object.entries(routinesByUser).forEach(([uid, g]) => {
+      const filtered = g.routines.filter((r) => r.type === filterType);
+      if (filtered.length > 0) out[Number(uid)] = { name: g.name, routines: filtered };
+    });
+    return out;
+  }, [routinesByUser, filterType]);
 
   useEffect(() => {
     api.getUsers(200).then((d: any) => setUsers(d.users || d || [])).catch(() => {});
@@ -563,10 +700,33 @@ function PersonalizadasTab() {
     </Card>
   );
 
+  const RoutineCardCustom = ({ routine }: { routine: any }) => (
+    <Card className="flex flex-col">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-semibold">{routine.name}</h3>
+        <div className="flex gap-1 shrink-0">
+          <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">{TYPE_LABELS[routine.type] || routine.type}</span>
+          {routine.billable && <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Facturable</span>}
+        </div>
+      </div>
+      {routine.description && <p className="text-sm text-zinc-400 mb-2 line-clamp-2">{routine.description}</p>}
+      <pre className="text-sm text-zinc-400 whitespace-pre-wrap mb-2 max-h-24 overflow-y-auto flex-1">{routine.content}</pre>
+      <div className="flex gap-2 text-xs text-zinc-500 mb-3">
+        {routine.duration > 0 && <span>{routine.duration} min</span>}
+        {routine.difficulty && <span>{DIFFICULTY_LABELS[routine.difficulty] || routine.difficulty}</span>}
+        {routine.instructor_name && <span>Instructor: {routine.instructor_name}</span>}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <Button size="sm" variant="secondary" onClick={() => openEdit(routine)}>Editar</Button>
+        <Button size="sm" variant="danger" onClick={() => handleDelete(routine.id)} loading={deletingId === routine.id}>Eliminar</Button>
+      </div>
+    </Card>
+  );
+
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="flex flex-wrap gap-2">
           <select
             className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
             value={filterUserId}
@@ -577,6 +737,14 @@ function PersonalizadasTab() {
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
           </select>
+          <select
+            className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="">Todos los tipos</option>
+            {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
         </div>
         {!showForm && !editingId && (
           <Button onClick={() => setShowForm(true)}>Nueva Personalizada</Button>
@@ -585,33 +753,22 @@ function PersonalizadasTab() {
 
       {(showForm || editingId) && formUI}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {routines.map((routine) => (
-          <Card key={routine.id}>
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-semibold">{routine.name}</h3>
-              <div className="flex gap-1">
-                <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">{TYPE_LABELS[routine.type] || routine.type}</span>
-                {routine.billable && <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Facturable</span>}
-              </div>
+      <div className="space-y-6">
+        {Object.entries(filteredByType).map(([uid, { name, routines: userRoutines }]) => (
+          <div key={uid}>
+            <h3 className="text-lg font-semibold text-zinc-200 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              {name}
+              <span className="text-sm font-normal text-zinc-500">({userRoutines.length} rutina{userRoutines.length !== 1 ? 's' : ''})</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {userRoutines.map((r) => <RoutineCardCustom key={r.id} routine={r} />)}
             </div>
-            {routine.target_user_name && (
-              <p className="text-sm text-purple-400 mb-1">Usuario: {routine.target_user_name}</p>
-            )}
-            {routine.description && <p className="text-sm text-zinc-400 mb-2">{routine.description}</p>}
-            <pre className="text-sm text-zinc-400 whitespace-pre-wrap mb-2 max-h-32 overflow-y-auto">{routine.content}</pre>
-            <div className="flex gap-2 text-xs text-zinc-500 mb-3">
-              {routine.duration > 0 && <span>{routine.duration} min</span>}
-              {routine.difficulty && <span>{DIFFICULTY_LABELS[routine.difficulty] || routine.difficulty}</span>}
-              {routine.instructor_name && <span>Instructor: {routine.instructor_name}</span>}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button size="sm" variant="secondary" onClick={() => openEdit(routine)}>Editar</Button>
-              <Button size="sm" variant="danger" onClick={() => handleDelete(routine.id)} loading={deletingId === routine.id}>Eliminar</Button>
-            </div>
-          </Card>
+          </div>
         ))}
-        {routines.length === 0 && <p className="text-zinc-500 col-span-2">No hay rutinas personalizadas.</p>}
+        {Object.keys(filteredByType).length === 0 && (
+          <p className="text-zinc-500 py-8 text-center">No hay rutinas personalizadas con los filtros actuales.</p>
+        )}
       </div>
     </>
   );
