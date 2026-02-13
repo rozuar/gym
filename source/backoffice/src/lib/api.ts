@@ -241,6 +241,10 @@ class ApiClient {
     return this.request<any>(`/payments?limit=${limit}&offset=${offset}`);
   }
 
+  async createPayment(data: { user_id: number; plan_id: number; payment_method: string; proof_image_url?: string }) {
+    return this.request<any>('/payments', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Export (returns blob, triggers download)
   private async downloadExport(endpoint: string, filename: string) {
     const url = `${API_URL.replace(/\/$/, '')}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;

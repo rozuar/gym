@@ -66,6 +66,7 @@ func (m *mockPaymentRepo) GetActiveSubscription(userID int64) (*models.Subscript
 	return m.getActiveSubscription, m.getActiveSubscriptionErr
 }
 func (m *mockPaymentRepo) IncrementClassesUsed(subscriptionID int64) error { return nil }
+func (m *mockPaymentRepo) DecrementClassesUsed(subscriptionID int64) error { return nil }
 func (m *mockPaymentRepo) DeactivateExpiredSubscriptions() error           { return nil }
 
 type mockPlanRepo struct {

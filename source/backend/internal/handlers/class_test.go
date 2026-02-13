@@ -52,7 +52,9 @@ func (m *mockClassRepo) GenerateWeekSchedules(startDate time.Time) error {
 	return m.generateSchedulesErr
 }
 func (m *mockClassRepo) CreateBooking(b *models.Booking) error       { return m.createBookingErr }
-func (m *mockClassRepo) CancelBooking(bookingID, userID int64) error { return m.cancelBookingErr }
+func (m *mockClassRepo) CancelBooking(bookingID, userID int64) (*int64, error) {
+	return nil, m.cancelBookingErr
+}
 func (m *mockClassRepo) CheckIn(bookingID int64) error               { return nil }
 func (m *mockClassRepo) SetBookingBeforePhoto(bookingID, userID int64, photoURL string) error {
 	return nil
@@ -60,7 +62,7 @@ func (m *mockClassRepo) SetBookingBeforePhoto(bookingID, userID int64, photoURL 
 func (m *mockClassRepo) ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error) {
 	return m.listUserBookings, m.listUserBookingsErr
 }
-func (m *mockClassRepo) GetScheduleBookings(scheduleID int64) ([]*models.Booking, error) {
+func (m *mockClassRepo) GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error) {
 	return nil, nil
 }
 

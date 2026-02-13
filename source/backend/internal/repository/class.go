@@ -268,25 +268,33 @@ func (r *ClassRepository) CreateBooking(b *models.Booking) error {
 	return tx.Commit()
 }
 
-func (r *ClassRepository) CancelBooking(bookingID, userID int64) error {
+func (r *ClassRepository) CancelBooking(bookingID, userID int64) (*int64, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
 	var scheduleID int64
-	err = tx.QueryRow("UPDATE bookings SET status = 'cancelled' WHERE id = $1 AND user_id = $2 AND status = 'booked' RETURNING class_schedule_id", bookingID, userID).Scan(&scheduleID)
+	var subID sql.NullInt64
+	err = tx.QueryRow("UPDATE bookings SET status = 'cancelled' WHERE id = $1 AND user_id = $2 AND status = 'booked' RETURNING class_schedule_id, subscription_id", bookingID, userID).Scan(&scheduleID, &subID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = tx.Exec("UPDATE class_schedules SET booked = booked - 1 WHERE id = $1", scheduleID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if subID.Valid {
+		return &subID.Int64, nil
+	}
+	return nil, nil
 }
 
 func (r *ClassRepository) CheckIn(bookingID int64) error {
@@ -348,9 +356,12 @@ func (r *ClassRepository) ListUserBookings(userID int64, upcoming bool) ([]*mode
 	return bookings, nil
 }
 
-func (r *ClassRepository) GetScheduleBookings(scheduleID int64) ([]*models.Booking, error) {
-	query := `SELECT id, user_id, class_schedule_id, subscription_id, status, checked_in_at, COALESCE(before_photo_url,''), created_at
-			  FROM bookings WHERE class_schedule_id = $1 ORDER BY created_at`
+func (r *ClassRepository) GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error) {
+	query := `SELECT b.id, b.user_id, b.class_schedule_id, b.subscription_id, b.status, b.checked_in_at, COALESCE(b.before_photo_url,''), b.created_at,
+			         u.name, u.email
+			  FROM bookings b
+			  JOIN users u ON b.user_id = u.id
+			  WHERE b.class_schedule_id = $1 ORDER BY b.created_at`
 
 	rows, err := r.db.Query(query, scheduleID)
 	if err != nil {
@@ -358,11 +369,11 @@ func (r *ClassRepository) GetScheduleBookings(scheduleID int64) ([]*models.Booki
 	}
 	defer rows.Close()
 
-	var bookings []*models.Booking
+	var bookings []*models.BookingWithUser
 	for rows.Next() {
-		b := &models.Booking{}
+		b := &models.BookingWithUser{}
 		var subID sql.NullInt64
-		if err := rows.Scan(&b.ID, &b.UserID, &b.ClassScheduleID, &subID, &b.Status, &b.CheckedInAt, &b.BeforePhotoURL, &b.CreatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.UserID, &b.ClassScheduleID, &subID, &b.Status, &b.CheckedInAt, &b.BeforePhotoURL, &b.CreatedAt, &b.UserName, &b.UserEmail); err != nil {
 			return nil, err
 		}
 		if subID.Valid {

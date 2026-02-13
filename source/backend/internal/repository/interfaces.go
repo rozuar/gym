@@ -38,6 +38,7 @@ type PaymentRepo interface {
 	CreateSubscription(sub *models.Subscription) error
 	GetActiveSubscription(userID int64) (*models.SubscriptionWithPlan, error)
 	IncrementClassesUsed(subscriptionID int64) error
+	DecrementClassesUsed(subscriptionID int64) error
 	DeactivateExpiredSubscriptions() error
 }
 
@@ -65,11 +66,11 @@ type ClassRepo interface {
 	ListSchedules(from, to time.Time) ([]*models.ScheduleWithDetails, error)
 	GenerateWeekSchedules(startDate time.Time) error
 	CreateBooking(b *models.Booking) error
-	CancelBooking(bookingID, userID int64) error
+	CancelBooking(bookingID, userID int64) (*int64, error)
 	CheckIn(bookingID int64) error
 	SetBookingBeforePhoto(bookingID, userID int64, photoURL string) error
 	ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error)
-	GetScheduleBookings(scheduleID int64) ([]*models.Booking, error)
+	GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error)
 }
 
 type RoutineRepo interface {

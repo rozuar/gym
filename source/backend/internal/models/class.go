@@ -101,3 +101,9 @@ type BookingWithDetails struct {
 	ScheduleDate   time.Time `json:"schedule_date"`
 	StartTime      string    `json:"start_time"`
 }
+
+type BookingWithUser struct {
+	Booking
+	UserName  string `json:"user_name"`
+	UserEmail string `json:"user_email"`
+}

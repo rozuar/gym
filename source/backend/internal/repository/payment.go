@@ -181,6 +181,12 @@ func (r *PaymentRepository) IncrementClassesUsed(subscriptionID int64) error {
 	return err
 }
 
+func (r *PaymentRepository) DecrementClassesUsed(subscriptionID int64) error {
+	query := `UPDATE subscriptions SET classes_used = GREATEST(classes_used - 1, 0) WHERE id = $1`
+	_, err := r.db.Exec(query, subscriptionID)
+	return err
+}
+
 func (r *PaymentRepository) DeactivateExpiredSubscriptions() error {
 	query := `UPDATE subscriptions SET active = false WHERE end_date < NOW() AND active = true`
 	_, err := r.db.Exec(query)

@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Plan } from '@/types';
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [purchasing, setPurchasing] = useState<number | null>(null);
 
   useEffect(() => {
     loadPlans();
@@ -26,21 +24,6 @@ export default function PlansPage() {
       setLoadError('No se pudieron cargar los planes. ¿Está el backend en marcha?');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePurchase = async (planId: number) => {
-    if (!confirm('¿Confirmar compra de este plan?')) return;
-
-    setPurchasing(planId);
-    try {
-      await api.createPayment(planId);
-      alert('Compra realizada con éxito');
-      window.location.href = '/profile';
-    } catch (err: any) {
-      alert(err.message || 'Error al procesar el pago');
-    } finally {
-      setPurchasing(null);
     }
   };
 
@@ -75,35 +58,32 @@ export default function PlansPage() {
           <p className="text-zinc-500 text-center text-sm mt-2">Crea datos de prueba desde la página de login (modo dev)</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <Card key={plan.id} className="flex flex-col">
-              <h2 className="text-xl font-bold mb-2">{plan.name}</h2>
-              {plan.description && (
-                <p className="text-zinc-400 text-sm mb-4">{plan.description}</p>
-              )}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {plans.map((plan) => (
+              <Card key={plan.id} className="flex flex-col">
+                <h2 className="text-xl font-bold mb-2">{plan.name}</h2>
+                {plan.description && (
+                  <p className="text-zinc-400 text-sm mb-4">{plan.description}</p>
+                )}
 
-              <div className="text-3xl font-bold text-blue-500 mb-4">
-                {formatPrice(plan.price, plan.currency)}
-              </div>
+                <div className="text-3xl font-bold text-blue-500 mb-4">
+                  {formatPrice(plan.price, plan.currency)}
+                </div>
 
-              <ul className="space-y-2 text-sm text-zinc-300 mb-6 flex-grow">
-                <li>• Duración: {plan.duration} días</li>
-                <li>
-                  • Clases: {plan.max_classes === 0 ? 'Ilimitadas' : `${plan.max_classes} clases`}
-                </li>
-              </ul>
-
-              <Button
-                className="w-full"
-                loading={purchasing === plan.id}
-                onClick={() => handlePurchase(plan.id)}
-              >
-                Comprar
-              </Button>
-            </Card>
-          ))}
-        </div>
+                <ul className="space-y-2 text-sm text-zinc-300 flex-grow">
+                  <li>Duracion: {plan.duration} dias</li>
+                  <li>
+                    Clases: {plan.max_classes === 0 ? 'Ilimitadas' : `${plan.max_classes} clases`}
+                  </li>
+                </ul>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-6 text-center">
+            <p className="text-zinc-400">Para contratar un plan, consulta en recepcion o habla con tu coach.</p>
+          </div>
+        </>
       )}
     </div>
   );
