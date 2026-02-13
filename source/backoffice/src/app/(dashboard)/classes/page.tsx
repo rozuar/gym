@@ -1,16 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const emptyForm = {
   discipline_id: '', name: '', description: '', day_of_week: '1', start_time: '07:00', end_time: '08:00', capacity: '15', instructor_ids: [] as string[],
 };
+
+type ViewMode = 'semana' | 'lista';
 
 export default function ClassesPage() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -23,6 +26,9 @@ export default function ClassesPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [detailClass, setDetailClass] = useState<any | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('semana');
+  const [filterDiscipline, setFilterDiscipline] = useState<string>('');
+  const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => {
     Promise.all([api.getClasses(), api.getDisciplines(), api.getInstructors(true)])
@@ -120,15 +126,72 @@ export default function ClassesPage() {
     }
   };
 
+  const filteredClasses = useMemo(() => {
+    return classes.filter((c) => {
+      if (!showInactive && !c.active) return false;
+      if (filterDiscipline && String(c.discipline_id) !== filterDiscipline) return false;
+      return true;
+    });
+  }, [classes, filterDiscipline, showInactive]);
+
+  const classesByDay = useMemo(() => {
+    const byDay: Record<number, any[]> = {};
+    for (let i = 0; i < 7; i++) byDay[i] = [];
+    filteredClasses.forEach((c) => {
+      byDay[c.day_of_week].push(c);
+    });
+    Object.values(byDay).forEach((arr) =>
+      arr.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
+    );
+    return byDay;
+  }, [filteredClasses]);
+
   if (loading) return <div className="animate-pulse">Cargando...</div>;
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">Clases</h1>
-        <Button onClick={() => (showForm ? cancelForm() : openCreate())}>
-          {showForm ? 'Cancelar' : 'Nueva Clase'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('semana')}
+              className={`px-3 py-2 text-sm ${viewMode === 'semana' ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+            >
+              Por día
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('lista')}
+              className={`px-3 py-2 text-sm ${viewMode === 'lista' ? 'bg-zinc-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+            >
+              Lista
+            </button>
+          </div>
+          <select
+            className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
+            value={filterDiscipline}
+            onChange={(e) => setFilterDiscipline(e.target.value)}
+          >
+            <option value="">Todas las disciplinas</option>
+            {disciplines.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded border-zinc-600 bg-zinc-800"
+            />
+            Inactivas
+          </label>
+          <Button onClick={() => (showForm ? cancelForm() : openCreate())}>
+            {showForm ? 'Cancelar' : 'Nueva Clase'}
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -185,52 +248,98 @@ export default function ClassesPage() {
         </Card>
       )}
 
-      <Card className="overflow-hidden p-0">
-        <table className="w-full">
-          <thead className="bg-zinc-800">
-            <tr>
-              <th className="text-left p-4">Clase</th>
-              <th className="text-left p-4">Disciplina</th>
-              <th className="text-left p-4">Día</th>
-              <th className="text-left p-4">Horario</th>
-              <th className="text-left p-4">Cap.</th>
-              <th className="text-left p-4">Instructor</th>
-              <th className="text-left p-4">Estado</th>
-              <th className="text-left p-4">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {classes.length === 0 && (
-              <tr><td colSpan={8} className="p-4 text-center text-zinc-500">No hay clases registradas</td></tr>
-            )}
-            {classes.map((cls) => (
-              <tr key={cls.id} className="border-t border-zinc-800">
-                <td className="p-4">{cls.name}</td>
-                <td className="p-4 text-zinc-400">{cls.discipline_name}</td>
-                <td className="p-4">{DAYS[cls.day_of_week]}</td>
-                <td className="p-4">{cls.start_time} - {cls.end_time}</td>
-                <td className="p-4">{cls.capacity}</td>
-                <td className="p-4 text-zinc-400">
-                  {cls.instructors && cls.instructors.length > 0 ? cls.instructors.join(', ') : '-'}
-                </td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs ${cls.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                    {cls.active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="p-4 flex gap-2 flex-wrap">
-                  <Button size="sm" variant="secondary" onClick={() => setDetailClass(cls)}>Ver</Button>
-                  <Button size="sm" variant="secondary" onClick={() => openEdit(cls)}>Editar</Button>
-                  <Button size="sm" variant="secondary" onClick={() => toggleActive(cls)}>
-                    {cls.active ? 'Desactivar' : 'Activar'}
-                  </Button>
-                  <Button size="sm" variant="danger" onClick={() => handleDelete(cls.id)} loading={deletingId === cls.id}>Eliminar</Button>
-                </td>
+      {viewMode === 'semana' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {DAYS_SHORT.map((_, idx) => {
+            const dayClasses = classesByDay[idx] || [];
+            return (
+              <Card key={idx} className="min-h-[120px]">
+                <h3 className="font-semibold text-zinc-200 mb-3 pb-2 border-b border-zinc-700">
+                  {DAYS[idx]}
+                </h3>
+                {dayClasses.length === 0 ? (
+                  <p className="text-sm text-zinc-500 italic">Sin clases</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {dayClasses.map((cls) => (
+                      <li
+                        key={cls.id}
+                        className="text-sm p-3 rounded-lg bg-zinc-700/50 border border-zinc-700 hover:border-zinc-600"
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{cls.name}</p>
+                            <p className="text-xs text-zinc-400">{cls.discipline_name}</p>
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              {cls.start_time} - {cls.end_time} · Cap. {cls.capacity}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs ${cls.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {cls.active ? '●' : '○'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <Button size="sm" variant="secondary" className="text-xs py-1" onClick={() => setDetailClass(cls)}>Ver</Button>
+                          <Button size="sm" variant="secondary" className="text-xs py-1" onClick={() => openEdit(cls)}>Editar</Button>
+                          <Button size="sm" variant="secondary" className="text-xs py-1" onClick={() => toggleActive(cls)}>{cls.active ? 'Desact.' : 'Activar'}</Button>
+                          <Button size="sm" variant="danger" className="text-xs py-1" onClick={() => handleDelete(cls.id)} loading={deletingId === cls.id}>Eliminar</Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="overflow-hidden p-0">
+          <table className="w-full">
+            <thead className="bg-zinc-800">
+              <tr>
+                <th className="text-left p-4">Clase</th>
+                <th className="text-left p-4">Disciplina</th>
+                <th className="text-left p-4">Día</th>
+                <th className="text-left p-4">Horario</th>
+                <th className="text-left p-4">Cap.</th>
+                <th className="text-left p-4">Instructor</th>
+                <th className="text-left p-4">Estado</th>
+                <th className="text-left p-4">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+            </thead>
+            <tbody>
+              {filteredClasses.length === 0 && (
+                <tr><td colSpan={8} className="p-4 text-center text-zinc-500">No hay clases{filterDiscipline || !showInactive ? ' con los filtros actuales' : ''}</td></tr>
+              )}
+              {filteredClasses.map((cls) => (
+                <tr key={cls.id} className="border-t border-zinc-800">
+                  <td className="p-4">{cls.name}</td>
+                  <td className="p-4 text-zinc-400">{cls.discipline_name}</td>
+                  <td className="p-4">{DAYS[cls.day_of_week]}</td>
+                  <td className="p-4">{cls.start_time} - {cls.end_time}</td>
+                  <td className="p-4">{cls.capacity}</td>
+                  <td className="p-4 text-zinc-400">
+                    {cls.instructors && cls.instructors.length > 0 ? cls.instructors.join(', ') : '-'}
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded text-xs ${cls.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {cls.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="p-4 flex gap-2 flex-wrap">
+                    <Button size="sm" variant="secondary" onClick={() => setDetailClass(cls)}>Ver</Button>
+                    <Button size="sm" variant="secondary" onClick={() => openEdit(cls)}>Editar</Button>
+                    <Button size="sm" variant="secondary" onClick={() => toggleActive(cls)}>
+                      {cls.active ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => handleDelete(cls.id)} loading={deletingId === cls.id}>Eliminar</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
 
       {/* Modal detalle */}
       {detailClass && (
