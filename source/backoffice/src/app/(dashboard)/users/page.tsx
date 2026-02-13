@@ -103,9 +103,10 @@ export default function UsersPage() {
         <table className="w-full">
           <thead className="bg-zinc-800">
             <tr>
+              <th className="p-2 w-12"></th>
               <th className="text-left p-4">Nombre</th>
               <th className="text-left p-4">Email</th>
-              <th className="text-left p-4">Teléfono</th>
+              <th className="text-left p-4">Telefono</th>
               <th className="text-left p-4">Rol</th>
               <th className="text-left p-4">Estado</th>
               <th className="text-left p-4">Acciones</th>
@@ -190,14 +191,34 @@ export default function UsersPage() {
             </div>
             <p><span className="text-zinc-500">Nombre:</span> {detailUser.name}</p>
             <p><span className="text-zinc-500">Email:</span> {detailUser.email}</p>
-            <p><span className="text-zinc-500">Teléfono:</span> {detailUser.phone || '-'}</p>
+            <p><span className="text-zinc-500">Telefono:</span> {detailUser.phone || '-'}</p>
             <p><span className="text-zinc-500">Rol:</span> {detailUser.role}</p>
             <p><span className="text-zinc-500">Estado:</span> {detailUser.active ? 'Activo' : 'Inactivo'}</p>
+            {detailUser.birth_date && (
+              <p><span className="text-zinc-500">Nacimiento:</span> {new Date(detailUser.birth_date).toLocaleDateString('es-CL')}</p>
+            )}
+            {detailUser.sex && (
+              <p><span className="text-zinc-500">Sexo:</span> {detailUser.sex === 'M' ? 'Masculino' : 'Femenino'}</p>
+            )}
+            {(detailUser.weight_kg ?? 0) > 0 && (
+              <p><span className="text-zinc-500">Peso:</span> {detailUser.weight_kg} kg</p>
+            )}
+            {(detailUser.height_cm ?? 0) > 0 && (
+              <p><span className="text-zinc-500">Estatura:</span> {detailUser.height_cm} cm</p>
+            )}
+            <p><span className="text-zinc-500">Invitaciones:</span> {detailUser.invitation_classes ?? 0}</p>
             <p className="text-sm text-zinc-500">Creado: {detailUser.created_at ? new Date(detailUser.created_at).toLocaleString() : '-'}</p>
-            <div className="flex gap-2 pt-4">
-              <Button variant="secondary" onClick={() => toggleActive(detailUser)}>{detailUser.active ? 'Desactivar' : 'Activar'}</Button>
-              <Button variant="danger" onClick={() => handleDelete(detailUser.id)} loading={deletingId === detailUser.id}>Eliminar</Button>
-              <Button variant="secondary" onClick={() => setDetailUser(null)}>Cerrar</Button>
+            <div className="flex gap-2 pt-4 flex-wrap">
+              <Button size="sm" variant="secondary" onClick={async () => {
+                try {
+                  const updated = await api.addInvitation(detailUser.id, 1);
+                  setDetailUser(updated);
+                  loadUsers();
+                } catch (err) { alert('Error al agregar invitacion'); }
+              }}>+1 Invitacion</Button>
+              <Button size="sm" variant="secondary" onClick={() => toggleActive(detailUser)}>{detailUser.active ? 'Desactivar' : 'Activar'}</Button>
+              <Button size="sm" variant="danger" onClick={() => handleDelete(detailUser.id)} loading={deletingId === detailUser.id}>Eliminar</Button>
+              <Button size="sm" variant="secondary" onClick={() => setDetailUser(null)}>Cerrar</Button>
             </div>
           </div>
         </div>

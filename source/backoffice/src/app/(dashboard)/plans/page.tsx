@@ -25,6 +25,9 @@ export default function PlansPage() {
   const [detailPlan, setDetailPlan] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', description: '', price: '', duration: '', max_classes: '' });
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     loadPlans();
@@ -43,14 +46,44 @@ export default function PlansPage() {
 
   const openDetail = async (id: number) => {
     setDetailPlan(null);
+    setEditingPlan(false);
     setDetailLoading(true);
     try {
       const data = await api.getPlan(id);
-      setDetailPlan(data.plan || data);
+      const p = data.plan || data;
+      setDetailPlan(p);
+      setEditForm({
+        name: p.name || '',
+        description: p.description || '',
+        price: String(p.price ?? ''),
+        duration: String(p.duration ?? ''),
+        max_classes: String(p.max_classes ?? '0'),
+      });
     } catch (err) {
       alert('Error al cargar plan');
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!detailPlan) return;
+    setEditSaving(true);
+    try {
+      await api.updatePlan(detailPlan.id, {
+        name: editForm.name,
+        description: editForm.description,
+        price: parseInt(editForm.price),
+        duration: parseInt(editForm.duration),
+        max_classes: parseInt(editForm.max_classes),
+      });
+      setEditingPlan(false);
+      setDetailPlan(null);
+      loadPlans();
+    } catch (err) {
+      alert('Error al actualizar plan');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -163,18 +196,35 @@ export default function PlansPage() {
       {detailPlan && !detailLoading && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setDetailPlan(null)}>
           <div className="bg-zinc-800 rounded-lg p-6 max-w-md w-full shadow-xl space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-lg">Detalle del plan</h3>
-            <p><span className="text-zinc-500">Nombre:</span> {detailPlan.name}</p>
-            <p><span className="text-zinc-500">Precio:</span> {formatCurrency(detailPlan.price ?? 0)}</p>
-            <p><span className="text-zinc-500">Duración:</span> {detailPlan.duration} días</p>
-            <p><span className="text-zinc-500">Máx. clases:</span> {detailPlan.max_classes === 0 ? 'Ilimitadas' : detailPlan.max_classes}</p>
-            <p><span className="text-zinc-500">Descripción:</span> {detailPlan.description || '-'}</p>
-            <p><span className="text-zinc-500">Estado:</span> {detailPlan.active ? 'Activo' : 'Inactivo'}</p>
-            <div className="flex gap-2 pt-4">
-              <Button variant="secondary" onClick={() => toggleActive(detailPlan)}>{detailPlan.active ? 'Desactivar' : 'Activar'}</Button>
-              <Button variant="danger" onClick={() => handleDelete(detailPlan.id)} loading={deletingId === detailPlan.id}>Eliminar</Button>
-              <Button variant="secondary" onClick={() => setDetailPlan(null)}>Cerrar</Button>
-            </div>
+            <h3 className="font-semibold text-lg">{editingPlan ? 'Editar plan' : 'Detalle del plan'}</h3>
+            {editingPlan ? (
+              <div className="space-y-3">
+                <Input label="Nombre" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                <Input label="Precio (CLP)" type="number" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
+                <Input label="Duracion (dias)" type="number" value={editForm.duration} onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })} />
+                <Input label="Max. clases (0=ilimitado)" type="number" value={editForm.max_classes} onChange={(e) => setEditForm({ ...editForm, max_classes: e.target.value })} />
+                <Input label="Descripcion" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={handleEditSave} loading={editSaving}>Guardar</Button>
+                  <Button variant="secondary" onClick={() => setEditingPlan(false)}>Cancelar</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p><span className="text-zinc-500">Nombre:</span> {detailPlan.name}</p>
+                <p><span className="text-zinc-500">Precio:</span> {formatCurrency(detailPlan.price ?? 0)}</p>
+                <p><span className="text-zinc-500">Duracion:</span> {detailPlan.duration} dias</p>
+                <p><span className="text-zinc-500">Max. clases:</span> {detailPlan.max_classes === 0 ? 'Ilimitadas' : detailPlan.max_classes}</p>
+                <p><span className="text-zinc-500">Descripcion:</span> {detailPlan.description || '-'}</p>
+                <p><span className="text-zinc-500">Estado:</span> {detailPlan.active ? 'Activo' : 'Inactivo'}</p>
+                <div className="flex gap-2 pt-4 flex-wrap">
+                  <Button size="sm" variant="secondary" onClick={() => setEditingPlan(true)}>Editar</Button>
+                  <Button size="sm" variant="secondary" onClick={() => toggleActive(detailPlan)}>{detailPlan.active ? 'Desactivar' : 'Activar'}</Button>
+                  <Button size="sm" variant="danger" onClick={() => handleDelete(detailPlan.id)} loading={deletingId === detailPlan.id}>Eliminar</Button>
+                  <Button size="sm" variant="secondary" onClick={() => setDetailPlan(null)}>Cerrar</Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -13,6 +13,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [editing, setEditing] = useState(false);
@@ -28,6 +29,7 @@ export default function ProfilePage() {
       setFormData({ name: user.name, phone: user.phone || '', avatar_url: user.avatar_url || '' });
     }
     loadSubscription();
+    loadPayments();
   }, [user, authLoading, router]);
 
   const loadSubscription = async () => {
@@ -37,10 +39,23 @@ export default function ProfilePage() {
       setLoadError('');
     } catch (err) {
       console.error(err);
-      setLoadError('No se pudo cargar la suscripción.');
+      setLoadError('No se pudo cargar la suscripcion.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPayments = async () => {
+    try {
+      const data = await api.getMyPayments();
+      setPayments(data.payments || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(amount);
   };
 
   const handleSave = async () => {
@@ -109,7 +124,7 @@ export default function ProfilePage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
               <Input
-                label="Teléfono"
+                label="Telefono"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
@@ -133,7 +148,19 @@ export default function ProfilePage() {
               {user?.avatar_url && <p><span className="text-zinc-500">Foto:</span> <a href={user.avatar_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Ver</a></p>}
               <p><span className="text-zinc-500">Nombre:</span> {user?.name}</p>
               <p><span className="text-zinc-500">Email:</span> {user?.email}</p>
-              <p><span className="text-zinc-500">Teléfono:</span> {user?.phone || '-'}</p>
+              <p><span className="text-zinc-500">Telefono:</span> {user?.phone || '-'}</p>
+              {user?.birth_date && (
+                <p><span className="text-zinc-500">Fecha de nacimiento:</span> {new Date(user.birth_date).toLocaleDateString('es-CL')}</p>
+              )}
+              {user?.sex && (
+                <p><span className="text-zinc-500">Sexo:</span> {user.sex === 'M' ? 'Masculino' : 'Femenino'}</p>
+              )}
+              {(user?.weight_kg ?? 0) > 0 && (
+                <p><span className="text-zinc-500">Peso:</span> {user.weight_kg} kg</p>
+              )}
+              {(user?.height_cm ?? 0) > 0 && (
+                <p><span className="text-zinc-500">Estatura:</span> {user.height_cm} cm</p>
+              )}
             </div>
           )}
         </Card>
@@ -165,12 +192,36 @@ export default function ProfilePage() {
             </div>
           ) : !loadError ? (
             <div className="text-center py-4">
-              <p className="text-zinc-400 mb-4">No tienes suscripción activa</p>
+              <p className="text-zinc-400 mb-4">No tienes suscripcion activa</p>
               <Button onClick={() => window.location.href = '/plans'}>
                 Ver Planes
               </Button>
             </div>
           ) : null}
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-semibold mb-4">Historial de pagos</h2>
+          {payments.length === 0 ? (
+            <p className="text-zinc-400 text-sm">Sin pagos registrados</p>
+          ) : (
+            <div className="space-y-2">
+              {payments.slice(0, 12).map((p: any) => (
+                <div key={p.id} className="flex justify-between items-center py-2 border-b border-zinc-800 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium">{p.plan_name}</p>
+                    <p className="text-xs text-zinc-500">{new Date(p.created_at).toLocaleDateString('es-CL')} - {p.payment_method || '-'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">{formatCurrency(p.amount)}</p>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${p.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                      {p.status === 'completed' ? 'Pagado' : p.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>

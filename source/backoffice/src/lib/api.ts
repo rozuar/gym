@@ -103,6 +103,10 @@ class ApiClient {
     return this.request<any>(`/users/${id}`, { method: 'DELETE' });
   }
 
+  async addInvitation(userId: number, count: number) {
+    return this.request<any>(`/users/${userId}/invitation`, { method: 'POST', body: JSON.stringify({ count }) });
+  }
+
   // Plans
   async getPlans() {
     return this.request<any>('/plans');
