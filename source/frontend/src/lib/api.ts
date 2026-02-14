@@ -5,12 +5,34 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ||
 
 class ApiClient {
   private accessToken: string | null = null;
+  private refreshing: Promise<boolean> | null = null;
 
   setToken(token: string | null) {
     this.accessToken = token;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async tryRefresh(): Promise<boolean> {
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    if (!refreshToken) return false;
+
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      this.accessToken = data.access_token;
+      localStorage.setItem('accessToken', data.access_token);
+      if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}, retry = true): Promise<T> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -24,6 +46,16 @@ class ApiClient {
       ...options,
       headers,
     });
+
+    if (response.status === 401 && retry && this.accessToken) {
+      if (!this.refreshing) {
+        this.refreshing = this.tryRefresh().finally(() => { this.refreshing = null; });
+      }
+      const ok = await this.refreshing;
+      if (ok) {
+        return this.request<T>(endpoint, options, false);
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));

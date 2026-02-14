@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"boxmagic/internal/models"
@@ -86,5 +87,8 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 func respondError(w http.ResponseWriter, status int, message string) {
+	if status >= 500 {
+		log.Printf("[ERROR] %d: %s", status, message)
+	}
 	respondJSON(w, status, map[string]string{"error": message})
 }
