@@ -340,6 +340,20 @@ func (r *ClassRepository) CancelBooking(bookingID, userID int64) (*int64, error)
 		return nil, err
 	}
 
+	// Restore credits atomically within the same transaction
+	if subID.Valid {
+		_, err = tx.Exec("UPDATE subscriptions SET classes_used = GREATEST(classes_used - 1, 0) WHERE id = $1", subID.Int64)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Booking was via invitation — restore the invitation class
+		_, err = tx.Exec("UPDATE users SET invitation_classes = invitation_classes + 1 WHERE id = $1", userID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}

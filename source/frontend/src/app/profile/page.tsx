@@ -150,7 +150,7 @@ export default function ProfilePage() {
               <p><span className="text-zinc-500">Email:</span> {user?.email}</p>
               <p><span className="text-zinc-500">Telefono:</span> {user?.phone || '-'}</p>
               {user?.birth_date && (
-                <p><span className="text-zinc-500">Fecha de nacimiento:</span> {new Date(user.birth_date).toLocaleDateString('es-CL')}</p>
+                <p><span className="text-zinc-500">Fecha de nacimiento:</span> {new Date(user.birth_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL')}</p>
               )}
               {user?.sex && (
                 <p><span className="text-zinc-500">Sexo:</span> {user.sex === 'M' ? 'Masculino' : 'Femenino'}</p>
@@ -175,8 +175,8 @@ export default function ProfilePage() {
               <p><span className="text-zinc-500">Plan:</span> {subscription.plan_name}</p>
               <p>
                 <span className="text-zinc-500">Vigencia:</span>{' '}
-                {new Date(subscription.start_date).toLocaleDateString('es-CL')} -{' '}
-                {new Date(subscription.end_date).toLocaleDateString('es-CL')}
+                {new Date(subscription.start_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL')} -{' '}
+                {new Date(subscription.end_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL')}
               </p>
               {subscription.classes_allowed > 0 && (
                 <p>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
                 <div key={p.id} className="flex justify-between items-center py-2 border-b border-zinc-800 last:border-0">
                   <div>
                     <p className="text-sm font-medium">{p.plan_name}</p>
-                    <p className="text-xs text-zinc-500">{new Date(p.created_at).toLocaleDateString('es-CL')} - {p.payment_method || '-'}</p>
+                    <p className="text-xs text-zinc-500">{new Date(p.created_at.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL')} - {p.payment_method || '-'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">{formatCurrency(p.amount)}</p>

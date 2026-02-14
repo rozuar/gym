@@ -412,18 +412,10 @@ func (h *ClassHandler) CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subID, err := h.classRepo.CancelBooking(bookingID, userID)
+	_, err = h.classRepo.CancelBooking(bookingID, userID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Booking not found or already cancelled")
 		return
-	}
-
-	// Restore credits
-	if subID != nil {
-		h.paymentRepo.DecrementClassesUsed(*subID)
-	} else {
-		// Booking was via invitation — restore the invitation class
-		h.userRepo.AddInvitationClasses(userID, 1)
 	}
 
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Booking cancelled"})
