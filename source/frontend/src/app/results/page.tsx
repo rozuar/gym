@@ -320,7 +320,7 @@ export default function ResultsPage() {
                     <div className="flex gap-4 mt-3 text-xs text-zinc-500">
                       {r.schedule_date && (
                         <span>
-                          Clase: {new Date(r.schedule_date).toLocaleDateString('es-CL', {
+                          Clase: {new Date(r.schedule_date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
@@ -328,7 +328,7 @@ export default function ResultsPage() {
                         </span>
                       )}
                       <span>
-                        Registrado: {new Date(r.created_at).toLocaleDateString('es-CL', {
+                        Registrado: {new Date(r.created_at.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
@@ -397,7 +397,7 @@ export default function ResultsPage() {
                             )}
                           </div>
                           <span className="text-zinc-600 text-xs">
-                            {new Date(h.created_at).toLocaleDateString('es-CL', {
+                            {new Date(h.created_at.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL', {
                               day: 'numeric',
                               month: 'short',
                               year: 'numeric',

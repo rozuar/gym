@@ -24,7 +24,7 @@ class ApiClient {
       if (!res.ok) return false;
       const data = await res.json();
       this.accessToken = data.access_token;
-      localStorage.setItem('accessToken', data.access_token);
+      localStorage.setItem('adminToken', data.access_token);
       if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
       return true;
     } catch {

@@ -179,7 +179,11 @@ func (h *UserHandler) AddInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, _ := h.userRepo.GetByID(id)
+	user, err := h.userRepo.GetByID(id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch user")
+		return
+	}
 	respondJSON(w, http.StatusOK, user)
 }
 
