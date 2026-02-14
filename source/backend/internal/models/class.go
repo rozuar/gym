@@ -82,7 +82,8 @@ type UpdateClassRequest struct {
 type ClassWithDetails struct {
 	Class
 	DisciplineName string   `json:"discipline_name"`
-	Instructors    []string `json:"instructors,omitempty"` // Nombres de instructores
+	Instructors    []string `json:"instructors,omitempty"`    // Nombres de instructores
+	InstructorIDs  []int64  `json:"instructor_ids,omitempty"` // IDs de instructores
 }
 
 type ScheduleWithDetails struct {

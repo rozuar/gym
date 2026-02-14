@@ -319,8 +319,14 @@ func (h *RoutineHandler) MyResults(w http.ResponseWriter, r *http.Request) {
 			limit = parsed
 		}
 	}
+	offset := 0
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
 
-	results, err := h.routineRepo.GetUserResults(userID, limit)
+	results, err := h.routineRepo.GetUserResults(userID, limit, offset)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to fetch results")
 		return

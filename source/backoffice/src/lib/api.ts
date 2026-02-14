@@ -144,8 +144,8 @@ class ApiClient {
   }
 
   // Plans
-  async getPlans() {
-    return this.request<any>('/plans');
+  async getPlans(activeOnly = false) {
+    return this.request<any>(`/plans${activeOnly ? '' : '?active=false'}`);
   }
 
   async getPlan(id: number) {

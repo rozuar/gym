@@ -12,6 +12,7 @@ import (
 
 	"boxmagic/internal/middleware"
 	"boxmagic/internal/models"
+	"boxmagic/internal/repository"
 )
 
 type mockClassRepo struct {
@@ -53,7 +54,10 @@ func (m *mockClassRepo) ListSchedules(from, to time.Time) ([]*models.ScheduleWit
 func (m *mockClassRepo) GenerateWeekSchedules(startDate time.Time) error {
 	return m.generateSchedulesErr
 }
-func (m *mockClassRepo) CreateBooking(b *models.Booking) error       { return m.createBookingErr }
+func (m *mockClassRepo) CreateBooking(b *models.Booking) error { return m.createBookingErr }
+func (m *mockClassRepo) CreateBookingTx(b *models.Booking, credit *repository.BookingCreditAction) error {
+	return m.createBookingErr
+}
 func (m *mockClassRepo) CancelBooking(bookingID, userID int64) (*int64, error) {
 	return nil, m.cancelBookingErr
 }

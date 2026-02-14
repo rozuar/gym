@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +21,8 @@ interface ResultItem {
 }
 
 export default function ResultsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [results, setResults] = useState<ResultItem[]>([]);
   const [routines, setRoutines] = useState<{ id: number; name: string; type: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,19 +32,23 @@ export default function ResultsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [form, setForm] = useState({ routine_id: 0, score: '', notes: '', rx: false });
-  
+
   // Filters
   const [filterType, setFilterType] = useState<string>('all');
   const [filterRoutine, setFilterRoutine] = useState<string>('all');
-  
+
   // Routine history
   const [viewingHistory, setViewingHistory] = useState<number | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading && !user) {
+      router.push('/login');
+      return;
+    }
+    if (user) loadData();
+  }, [user, authLoading]);
 
   const loadData = async () => {
     try {

@@ -193,7 +193,11 @@ func (r *RoutineRepository) LogResult(result *models.UserRoutineResult) error {
 		result.Score, result.Notes, result.Rx).Scan(&result.ID, &result.CreatedAt)
 }
 
-func (r *RoutineRepository) GetUserResults(userID int64, limit int) ([]*models.UserResultWithDetails, error) {
+func (r *RoutineRepository) GetUserResults(userID int64, limit int, offset ...int) ([]*models.UserResultWithDetails, error) {
+	off := 0
+	if len(offset) > 0 {
+		off = offset[0]
+	}
 	query := `SELECT urr.id, urr.user_id, urr.routine_id, urr.class_schedule_id, urr.score, urr.notes, urr.rx, urr.created_at,
 			         rt.name, rt.type, cs.date
 			  FROM user_routine_results urr
@@ -201,9 +205,9 @@ func (r *RoutineRepository) GetUserResults(userID int64, limit int) ([]*models.U
 			  LEFT JOIN class_schedules cs ON urr.class_schedule_id = cs.id
 			  WHERE urr.user_id = $1
 			  ORDER BY urr.created_at DESC
-			  LIMIT $2`
+			  LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.Query(query, userID, limit)
+	rows, err := r.db.Query(query, userID, limit, off)
 	if err != nil {
 		return nil, err
 	}

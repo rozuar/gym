@@ -52,12 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Acceso denegado. Solo administradores.');
     }
     localStorage.setItem('adminToken', response.access_token);
+    if (response.refresh_token) {
+      localStorage.setItem('refreshToken', response.refresh_token);
+    }
     api.setToken(response.access_token);
     setUser(response.user);
   };
 
   const logout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('refreshToken');
     api.setToken(null);
     setUser(null);
     router.push('/login');

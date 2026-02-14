@@ -68,6 +68,7 @@ type ClassRepo interface {
 	ListSchedules(from, to time.Time) ([]*models.ScheduleWithDetails, error)
 	GenerateWeekSchedules(startDate time.Time) error
 	CreateBooking(b *models.Booking) error
+	CreateBookingTx(b *models.Booking, credit *BookingCreditAction) error
 	CancelBooking(bookingID, userID int64) (*int64, error)
 	CheckIn(bookingID int64) error
 	SetBookingBeforePhoto(bookingID, userID int64, photoURL string) error
@@ -86,7 +87,7 @@ type RoutineRepo interface {
 	GetScheduleRoutine(scheduleID int64) (*models.ScheduleRoutineWithDetails, error)
 	RemoveScheduleRoutine(scheduleID int64) error
 	LogResult(result *models.UserRoutineResult) error
-	GetUserResults(userID int64, limit int) ([]*models.UserResultWithDetails, error)
+	GetUserResults(userID int64, limit int, offset ...int) ([]*models.UserResultWithDetails, error)
 	GetRoutineHistory(routineID int64, userID int64) ([]*models.UserRoutineResult, error)
 	GetResultByID(resultID int64) (*models.UserRoutineResult, error)
 	UpdateResult(resultID int64, userID int64, score string, notes string, rx bool) error

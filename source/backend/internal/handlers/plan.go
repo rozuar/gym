@@ -54,7 +54,7 @@ func (h *PlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PlanHandler) List(w http.ResponseWriter, r *http.Request) {
-	activeOnly := r.URL.Query().Get("active") == "true"
+	activeOnly := r.URL.Query().Get("active") != "false"
 
 	plans, err := h.planRepo.List(activeOnly)
 	if err != nil {

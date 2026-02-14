@@ -61,7 +61,7 @@ export default function ClassesPage() {
       start_time: cls.start_time,
       end_time: cls.end_time,
       capacity: String(cls.capacity),
-      instructor_ids: [],
+      instructor_ids: (cls.instructor_ids || []).map(String),
     });
     setShowForm(true);
   };

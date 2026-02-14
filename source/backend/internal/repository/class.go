@@ -95,8 +95,10 @@ func (r *ClassRepository) GetClassByID(id int64) (*models.ClassWithDetails, erro
 	instructorRepo := NewInstructorRepository(r.db)
 	instructors, _ := instructorRepo.GetClassInstructors(id)
 	c.Instructors = make([]string, len(instructors))
+	c.InstructorIDs = make([]int64, len(instructors))
 	for i, inst := range instructors {
 		c.Instructors[i] = inst.Name
+		c.InstructorIDs[i] = inst.ID
 	}
 
 	return c, nil
@@ -143,8 +145,10 @@ func (r *ClassRepository) ListClasses(disciplineID int64, activeOnly bool) ([]*m
 		// Load instructors for each class
 		instructors, _ := instructorRepo.GetClassInstructors(c.ID)
 		c.Instructors = make([]string, len(instructors))
+		c.InstructorIDs = make([]int64, len(instructors))
 		for i, inst := range instructors {
 			c.Instructors[i] = inst.Name
+			c.InstructorIDs[i] = inst.ID
 		}
 		classes = append(classes, c)
 	}
@@ -245,7 +249,17 @@ func (r *ClassRepository) GenerateWeekSchedules(startDate time.Time) error {
 
 // Bookings
 
+// BookingCreditAction specifies what credit to consume within the booking transaction.
+type BookingCreditAction struct {
+	UseInvitation  bool  // decrement invitation_classes on user
+	SubscriptionID int64 // increment classes_used on subscription (0 = skip)
+}
+
 func (r *ClassRepository) CreateBooking(b *models.Booking) error {
+	return r.CreateBookingTx(b, nil)
+}
+
+func (r *ClassRepository) CreateBookingTx(b *models.Booking, credit *BookingCreditAction) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -264,6 +278,26 @@ func (r *ClassRepository) CreateBooking(b *models.Booking) error {
 	}
 	if booked >= capacity {
 		return sql.ErrNoRows // No space
+	}
+
+	// Decrement credits atomically within the same transaction
+	if credit != nil {
+		if credit.UseInvitation {
+			res, err := tx.Exec("UPDATE users SET invitation_classes = invitation_classes - 1 WHERE id = $1 AND invitation_classes > 0", b.UserID)
+			if err != nil {
+				return err
+			}
+			n, _ := res.RowsAffected()
+			if n == 0 {
+				return errors.New("no invitation classes available")
+			}
+		}
+		if credit.SubscriptionID > 0 {
+			_, err := tx.Exec("UPDATE subscriptions SET classes_used = classes_used + 1 WHERE id = $1", credit.SubscriptionID)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// Create booking (subscription_id puede ser NULL para invitaciones)
