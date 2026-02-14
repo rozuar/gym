@@ -31,6 +31,8 @@ type mockClassRepo struct {
 
 func (m *mockClassRepo) GetDB() *sql.DB                              { return nil }
 func (m *mockClassRepo) CreateDiscipline(d *models.Discipline) error { return m.createDisciplineErr }
+func (m *mockClassRepo) UpdateDiscipline(d *models.Discipline) error { return nil }
+func (m *mockClassRepo) DeleteDiscipline(id int64) error             { return nil }
 func (m *mockClassRepo) ListDisciplines(activeOnly bool) ([]*models.Discipline, error) {
 	return m.listDisciplines, m.listDisciplinesErr
 }

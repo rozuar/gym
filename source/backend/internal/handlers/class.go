@@ -57,7 +57,8 @@ func (h *ClassHandler) CreateDiscipline(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ClassHandler) ListDisciplines(w http.ResponseWriter, r *http.Request) {
-	disciplines, err := h.classRepo.ListDisciplines(true)
+	activeOnly := r.URL.Query().Get("active") != "false"
+	disciplines, err := h.classRepo.ListDisciplines(activeOnly)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to fetch disciplines")
 		return
@@ -66,6 +67,70 @@ func (h *ClassHandler) ListDisciplines(w http.ResponseWriter, r *http.Request) {
 		disciplines = []*models.Discipline{}
 	}
 	respondJSON(w, http.StatusOK, map[string]interface{}{"disciplines": disciplines})
+}
+
+func (h *ClassHandler) UpdateDiscipline(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid discipline ID")
+		return
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Color       string `json:"color"`
+		Active      *bool  `json:"active"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	disciplines, _ := h.classRepo.ListDisciplines(false)
+	var d *models.Discipline
+	for _, disc := range disciplines {
+		if disc.ID == id {
+			d = disc
+			break
+		}
+	}
+	if d == nil {
+		respondError(w, http.StatusNotFound, "Discipline not found")
+		return
+	}
+
+	if req.Name != "" {
+		d.Name = req.Name
+	}
+	if req.Description != "" {
+		d.Description = req.Description
+	}
+	if req.Color != "" {
+		d.Color = req.Color
+	}
+	if req.Active != nil {
+		d.Active = *req.Active
+	}
+
+	if err := h.classRepo.UpdateDiscipline(d); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update discipline")
+		return
+	}
+	respondJSON(w, http.StatusOK, d)
+}
+
+func (h *ClassHandler) DeleteDiscipline(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid discipline ID")
+		return
+	}
+	if err := h.classRepo.DeleteDiscipline(id); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to delete discipline")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Classes

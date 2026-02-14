@@ -83,6 +83,8 @@ func main() {
 	// Disciplines (public read, admin write)
 	mux.HandleFunc("GET /api/v1/disciplines", classHandler.ListDisciplines)
 	mux.Handle("POST /api/v1/disciplines", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.CreateDiscipline))))
+	mux.Handle("PUT /api/v1/disciplines/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.UpdateDiscipline))))
+	mux.Handle("DELETE /api/v1/disciplines/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.DeleteDiscipline))))
 
 	// Classes (public read, admin write)
 	mux.HandleFunc("GET /api/v1/classes", classHandler.ListClasses)
@@ -120,6 +122,7 @@ func main() {
 	// Results
 	mux.Handle("POST /api/v1/results", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.LogResult)))
 	mux.Handle("GET /api/v1/results/me", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.MyResults)))
+	mux.Handle("GET /api/v1/users/{userId}/results", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.UserResults))))
 	mux.Handle("PUT /api/v1/results/{id}", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.UpdateResult)))
 	mux.Handle("DELETE /api/v1/results/{id}", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.DeleteResult)))
 

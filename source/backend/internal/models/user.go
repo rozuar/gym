@@ -43,7 +43,7 @@ type LoginRequest struct {
 
 type UpdateUserRequest struct {
 	Name              string  `json:"name,omitempty"`
-	Phone             string  `json:"phone,omitempty"`
+	Phone             *string `json:"phone,omitempty"`    // nil=no change, ptr to ""=clear
 	AvatarURL         *string `json:"avatar_url,omitempty"` // nil=no change, ptr to ""=clear
 	Active            *bool   `json:"active,omitempty"`
 	Role              Role    `json:"role,omitempty"`

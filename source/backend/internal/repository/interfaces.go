@@ -55,6 +55,8 @@ type InstructorRepo interface {
 type ClassRepo interface {
 	GetDB() *sql.DB
 	CreateDiscipline(d *models.Discipline) error
+	UpdateDiscipline(d *models.Discipline) error
+	DeleteDiscipline(id int64) error
 	ListDisciplines(activeOnly bool) ([]*models.Discipline, error)
 	CreateClass(c *models.Class) error
 	GetClassByID(id int64) (*models.ClassWithDetails, error)

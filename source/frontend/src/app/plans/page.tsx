@@ -9,9 +9,11 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [invitationPrice, setInvitationPrice] = useState(0);
 
   useEffect(() => {
     loadPlans();
+    api.getConfig().then((c) => setInvitationPrice(c.invitation_class_price || 0)).catch(() => {});
   }, []);
 
   const loadPlans = async () => {
@@ -80,7 +82,15 @@ export default function PlansPage() {
               </Card>
             ))}
           </div>
-          <div className="mt-6 text-center">
+          {invitationPrice > 0 && (
+            <Card className="mt-6">
+              <p className="text-sm text-zinc-400">
+                <span className="font-medium text-zinc-300">Clase de invitacion:</span>{' '}
+                {formatPrice(invitationPrice, 'CLP')} por clase (sin plan)
+              </p>
+            </Card>
+          )}
+          <div className="mt-4 text-center">
             <p className="text-zinc-400">Para contratar un plan, consulta en recepcion o habla con tu coach.</p>
           </div>
         </>

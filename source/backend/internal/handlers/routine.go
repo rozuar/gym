@@ -332,6 +332,32 @@ func (h *RoutineHandler) MyResults(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]interface{}{"results": results})
 }
 
+func (h *RoutineHandler) UserResults(w http.ResponseWriter, r *http.Request) {
+	userID, err := strconv.ParseInt(r.PathValue("userId"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+
+	results, err := h.routineRepo.GetUserResults(userID, limit)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch results")
+		return
+	}
+	if results == nil {
+		results = []*models.UserResultWithDetails{}
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{"results": results})
+}
+
 func (h *RoutineHandler) GetRoutineHistory(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r.Context())
 

@@ -27,6 +27,17 @@ func (r *ClassRepository) CreateDiscipline(d *models.Discipline) error {
 	return r.db.QueryRow(query, d.Name, d.Description, d.Color, true).Scan(&d.ID, &d.CreatedAt)
 }
 
+func (r *ClassRepository) UpdateDiscipline(d *models.Discipline) error {
+	query := `UPDATE disciplines SET name=$1, description=$2, color=$3, active=$4 WHERE id=$5`
+	_, err := r.db.Exec(query, d.Name, d.Description, d.Color, d.Active, d.ID)
+	return err
+}
+
+func (r *ClassRepository) DeleteDiscipline(id int64) error {
+	_, err := r.db.Exec("DELETE FROM disciplines WHERE id = $1", id)
+	return err
+}
+
 func (r *ClassRepository) ListDisciplines(activeOnly bool) ([]*models.Discipline, error) {
 	query := `SELECT id, name, description, color, active, created_at FROM disciplines`
 	if activeOnly {

@@ -26,6 +26,7 @@ export default function UsersPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingAvatar, setEditingAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [userResults, setUserResults] = useState<any[] | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
@@ -55,6 +56,7 @@ export default function UsersPage() {
   const openDetail = async (id: number) => {
     setDetailUser(null);
     setEditingAvatar(false);
+    setUserResults(null);
     setDetailLoading(true);
     try {
       const user = await api.getUser(id);
@@ -242,10 +244,33 @@ export default function UsersPage() {
                   loadUsers(page * PAGE_SIZE);
                 } catch (err) { alert('Error al agregar invitacion'); }
               }}>+1 Invitacion</Button>
+              <Button size="sm" variant="secondary" onClick={async () => {
+                try {
+                  const data = await api.getUserResults(detailUser.id, 20);
+                  setUserResults(data.results || []);
+                } catch (err) { alert('Error al cargar resultados'); }
+              }}>Ver resultados</Button>
               <Button size="sm" variant="secondary" onClick={() => toggleActive(detailUser)}>{detailUser.active ? 'Desactivar' : 'Activar'}</Button>
               <Button size="sm" variant="danger" onClick={() => handleDelete(detailUser.id)} loading={deletingId === detailUser.id}>Eliminar</Button>
               <Button size="sm" variant="secondary" onClick={() => setDetailUser(null)}>Cerrar</Button>
             </div>
+            {userResults !== null && (
+              <div className="pt-3 border-t border-zinc-700">
+                <p className="text-sm font-medium mb-2">Resultados ({userResults.length})</p>
+                {userResults.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Sin resultados registrados</p>
+                ) : (
+                  <div className="space-y-1 max-h-40 overflow-auto">
+                    {userResults.map((r: any) => (
+                      <div key={r.id} className="text-sm flex justify-between py-1 border-b border-zinc-800 last:border-0">
+                        <span>{r.routine_name || `Rutina #${r.routine_id}`}</span>
+                        <span className="text-zinc-400">{r.score}{r.rx ? ' Rx' : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

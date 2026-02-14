@@ -107,6 +107,10 @@ class ApiClient {
     return this.request<any>(`/users/${userId}/invitation`, { method: 'POST', body: JSON.stringify({ count }) });
   }
 
+  async getUserResults(userId: number, limit = 50) {
+    return this.request<any>(`/users/${userId}/results?limit=${limit}`);
+  }
+
   // Plans
   async getPlans() {
     return this.request<any>('/plans');
@@ -135,6 +139,14 @@ class ApiClient {
 
   async createDiscipline(data: any) {
     return this.request<any>('/disciplines', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateDiscipline(id: number, data: any) {
+    return this.request<any>(`/disciplines/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async deleteDiscipline(id: number) {
+    return this.request<any>(`/disciplines/${id}`, { method: 'DELETE' });
   }
 
   // Classes
