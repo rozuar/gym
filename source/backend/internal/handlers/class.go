@@ -374,6 +374,15 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		useInvitation = true
 	}
 
+	// Decrement credits BEFORE creating booking so we can rollback cleanly
+	if useInvitation {
+		ok, err := h.userRepo.UseInvitationClass(userID)
+		if err != nil || !ok {
+			respondError(w, http.StatusForbidden, "Failed to use invitation class")
+			return
+		}
+	}
+
 	booking := &models.Booking{
 		UserID:          userID,
 		ClassScheduleID: scheduleID,
@@ -385,13 +394,15 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.classRepo.CreateBooking(booking); err != nil {
+		// Restore invitation if booking failed
+		if useInvitation {
+			h.userRepo.AddInvitationClasses(userID, 1)
+		}
 		respondError(w, http.StatusConflict, "Class is full or booking failed")
 		return
 	}
 
-	if useInvitation {
-		h.userRepo.UseInvitationClass(userID)
-	} else if subscription != nil {
+	if !useInvitation && subscription != nil {
 		h.paymentRepo.IncrementClassesUsed(subscription.ID)
 	}
 

@@ -53,8 +53,18 @@ func Auth(cfg *config.Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			userID := int64(claims["sub"].(float64))
-			role := models.Role(claims["role"].(string))
+			subFloat, ok := claims["sub"].(float64)
+			if !ok {
+				http.Error(w, `{"error":"Invalid token claims"}`, http.StatusUnauthorized)
+				return
+			}
+			roleStr, ok := claims["role"].(string)
+			if !ok {
+				http.Error(w, `{"error":"Invalid token claims"}`, http.StatusUnauthorized)
+				return
+			}
+			userID := int64(subFloat)
+			role := models.Role(roleStr)
 
 			ctx := context.WithValue(r.Context(), userIDKey, userID)
 			ctx = context.WithValue(ctx, roleKey, role)

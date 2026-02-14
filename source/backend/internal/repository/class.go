@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
 	"boxmagic/internal/models"
@@ -113,7 +115,7 @@ func (r *ClassRepository) ListClasses(disciplineID int64, activeOnly bool) ([]*m
 
 	if disciplineID > 0 {
 		argCount++
-		query += " AND c.discipline_id = $" + string(rune('0'+argCount))
+		query += fmt.Sprintf(" AND c.discipline_id = $%d", argCount)
 		args = append(args, disciplineID)
 	}
 	if activeOnly {
@@ -250,11 +252,15 @@ func (r *ClassRepository) CreateBooking(b *models.Booking) error {
 	}
 	defer tx.Rollback()
 
-	// Check capacity
+	// Check capacity and not cancelled
 	var booked, capacity int
-	err = tx.QueryRow("SELECT booked, capacity FROM class_schedules WHERE id = $1 FOR UPDATE", b.ClassScheduleID).Scan(&booked, &capacity)
+	var cancelled bool
+	err = tx.QueryRow("SELECT booked, capacity, cancelled FROM class_schedules WHERE id = $1 FOR UPDATE", b.ClassScheduleID).Scan(&booked, &capacity, &cancelled)
 	if err != nil {
 		return err
+	}
+	if cancelled {
+		return errors.New("schedule is cancelled")
 	}
 	if booked >= capacity {
 		return sql.ErrNoRows // No space

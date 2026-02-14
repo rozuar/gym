@@ -54,7 +54,7 @@ export interface Class {
   end_time: string;
   capacity: number;
   discipline_name?: string;
-  instructor_name?: string;
+  instructors?: string[];
 }
 
 export interface Schedule {
