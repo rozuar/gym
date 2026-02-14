@@ -16,6 +16,8 @@ interface User {
   created_at: string;
 }
 
+const PAGE_SIZE = 25;
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,20 +26,30 @@ export default function UsersPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingAvatar, setEditingAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     loadUsers();
   }, []);
 
-  const loadUsers = async () => {
+  const loadUsers = async (offset = 0) => {
+    setLoading(true);
     try {
-      const data = await api.getUsers(100, 0);
-      setUsers(data.users || []);
+      const data = await api.getUsers(PAGE_SIZE, offset);
+      const list = data.users || [];
+      setUsers(list);
+      setHasMore(list.length === PAGE_SIZE);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const goPage = (newPage: number) => {
+    setPage(newPage);
+    loadUsers(newPage * PAGE_SIZE);
   };
 
   const openDetail = async (id: number) => {
@@ -61,7 +73,7 @@ export default function UsersPage() {
       await api.updateUser(detailUser.id, { avatar_url: avatarUrl });
       setDetailUser((p: any) => p ? { ...p, avatar_url: avatarUrl || '' } : null);
       setEditingAvatar(false);
-      loadUsers();
+      loadUsers(page * PAGE_SIZE);
     } catch (err) {
       alert('Error al actualizar avatar');
     }
@@ -70,7 +82,7 @@ export default function UsersPage() {
   const toggleActive = async (user: User) => {
     try {
       await api.updateUser(user.id, { active: !user.active });
-      loadUsers();
+      loadUsers(page * PAGE_SIZE);
       if (detailUser?.id === user.id) setDetailUser((p: any) => p ? { ...p, active: !p.active } : null);
     } catch (err) {
       alert('Error al actualizar usuario');
@@ -83,7 +95,7 @@ export default function UsersPage() {
     try {
       await api.deleteUser(id);
       setDetailUser(null);
-      loadUsers();
+      loadUsers(page * PAGE_SIZE);
     } catch (err) {
       alert('Error al eliminar usuario');
     } finally {
@@ -150,6 +162,20 @@ export default function UsersPage() {
         </table>
       </Card>
 
+      <div className="flex justify-between items-center mt-4">
+        <span className="text-sm text-zinc-400">
+          Página {page + 1} {users.length > 0 ? `(${users.length} usuarios)` : ''}
+        </span>
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" disabled={page === 0} onClick={() => goPage(page - 1)}>
+            Anterior
+          </Button>
+          <Button size="sm" variant="secondary" disabled={!hasMore} onClick={() => goPage(page + 1)}>
+            Siguiente
+          </Button>
+        </div>
+      </div>
+
       {detailLoading && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-zinc-800 rounded-lg p-6">Cargando...</div>
@@ -213,7 +239,7 @@ export default function UsersPage() {
                 try {
                   const updated = await api.addInvitation(detailUser.id, 1);
                   setDetailUser(updated);
-                  loadUsers();
+                  loadUsers(page * PAGE_SIZE);
                 } catch (err) { alert('Error al agregar invitacion'); }
               }}>+1 Invitacion</Button>
               <Button size="sm" variant="secondary" onClick={() => toggleActive(detailUser)}>{detailUser.active ? 'Desactivar' : 'Activar'}</Button>

@@ -148,16 +148,56 @@ export default function DashboardPage() {
       <Button variant="secondary" className="mb-4" onClick={loadExtraStats}>
         Cargar asistencia e ingresos (últimos 30 días)
       </Button>
-      {attendanceStats && (
-        <Card className="mb-4">
-          <p className="text-zinc-500 text-sm mb-2">Asistencia por período</p>
-          <pre className="text-sm text-zinc-300 overflow-auto max-h-40">{JSON.stringify(attendanceStats, null, 2)}</pre>
+      {attendanceStats?.stats?.length > 0 && (
+        <Card className="mb-4 overflow-hidden p-0">
+          <p className="text-zinc-500 text-sm p-4 pb-2">Asistencia por día</p>
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-800">
+              <tr>
+                <th className="text-left p-3">Fecha</th>
+                <th className="text-right p-3">Cupos</th>
+                <th className="text-right p-3">Reservas</th>
+                <th className="text-right p-3">Asistencia</th>
+                <th className="text-right p-3">No show</th>
+                <th className="text-right p-3">Tasa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attendanceStats.stats.map((s: any) => (
+                <tr key={s.date} className="border-t border-zinc-800">
+                  <td className="p-3">{new Date(s.date.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}</td>
+                  <td className="p-3 text-right">{s.total_slots}</td>
+                  <td className="p-3 text-right">{s.booked}</td>
+                  <td className="p-3 text-right text-green-400">{s.attended}</td>
+                  <td className="p-3 text-right text-red-400">{s.no_show}</td>
+                  <td className="p-3 text-right">{(s.rate * 100).toFixed(0)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       )}
-      {revenueStats && (
-        <Card>
-          <p className="text-zinc-500 text-sm mb-2">Ingresos por período</p>
-          <pre className="text-sm text-zinc-300 overflow-auto max-h-40">{JSON.stringify(revenueStats, null, 2)}</pre>
+      {revenueStats?.stats?.length > 0 && (
+        <Card className="overflow-hidden p-0">
+          <p className="text-zinc-500 text-sm p-4 pb-2">Ingresos por mes</p>
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-800">
+              <tr>
+                <th className="text-left p-3">Período</th>
+                <th className="text-right p-3">Pagos</th>
+                <th className="text-right p-3">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenueStats.stats.map((s: any) => (
+                <tr key={s.period} className="border-t border-zinc-800">
+                  <td className="p-3">{s.period}</td>
+                  <td className="p-3 text-right">{s.count}</td>
+                  <td className="p-3 text-right font-semibold">{formatCurrency(s.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       )}
     </div>

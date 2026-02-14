@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +11,8 @@ import { Schedule } from '@/types';
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export default function SchedulePage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [routinesByScheduleId, setRoutinesByScheduleId] = useState<Record<number, { name: string; type?: string; content?: string } | null>>({});
   const [loading, setLoading] = useState(true);
@@ -57,6 +61,10 @@ export default function SchedulePage() {
   }, [loadSchedules]);
 
   const handleBook = async (scheduleId: number) => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     setBooking(scheduleId);
     try {
       await api.createBooking(scheduleId);
@@ -144,7 +152,7 @@ export default function SchedulePage() {
                             loading={booking === schedule.id}
                             onClick={() => handleBook(schedule.id)}
                           >
-                            {schedule.available === 0 ? 'Lleno' : 'Reservar'}
+                            {schedule.available === 0 ? 'Lleno' : user ? 'Reservar' : 'Ingresar para reservar'}
                           </Button>
                         </div>
                       </Card>
