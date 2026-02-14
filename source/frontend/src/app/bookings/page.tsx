@@ -14,7 +14,6 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<number | null>(null);
-  const [photoPrice, setPhotoPrice] = useState(0);
   const [photoUrl, setPhotoUrl] = useState('');
   const [addingPhotoId, setAddingPhotoId] = useState<number | null>(null);
 
@@ -25,7 +24,6 @@ export default function BookingsPage() {
     }
     if (user) {
       loadBookings();
-      api.getConfig().then((c) => setPhotoPrice(c.before_class_photo_price || 0)).catch(() => {});
     }
   }, [user, authLoading, router]);
 
@@ -119,7 +117,7 @@ export default function BookingsPage() {
       ) : (
         <div className="space-y-4">
           {bookings.map((booking) => {
-            const date = new Date(booking.schedule_date + 'T12:00:00');
+            const date = new Date(booking.schedule_date.slice(0, 10) + 'T12:00:00');
             const formatted = date.toLocaleDateString('es-CL', {
               weekday: 'short',
               day: 'numeric',
@@ -163,7 +161,7 @@ export default function BookingsPage() {
                         onClick={() => handleAddPhoto(booking.id)}
                         disabled={!photoUrl.trim()}
                       >
-                        Agregar foto {photoPrice > 0 ? `(+$${photoPrice.toLocaleString('es-CL')})` : ''}
+                        Agregar foto
                       </Button>
                     </div>
                   )}

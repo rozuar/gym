@@ -105,7 +105,7 @@ export default function SchedulePage() {
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([date, items]) => {
-            const d = new Date(date + 'T12:00:00');
+            const d = new Date(date.slice(0, 10) + 'T12:00:00');
             const dayName = DAYS[d.getDay()];
             const formatted = d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
 

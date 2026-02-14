@@ -124,7 +124,8 @@ func (h *ClassHandler) ListClasses(w http.ResponseWriter, r *http.Request) {
 		disciplineID, _ = strconv.ParseInt(d, 10, 64)
 	}
 
-	classes, err := h.classRepo.ListClasses(disciplineID, true)
+	activeOnly := r.URL.Query().Get("active") != "false"
+	classes, err := h.classRepo.ListClasses(disciplineID, activeOnly)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to fetch classes")
 		return

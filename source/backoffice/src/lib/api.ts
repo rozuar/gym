@@ -138,8 +138,8 @@ class ApiClient {
   }
 
   // Classes
-  async getClasses() {
-    return this.request<any>('/classes');
+  async getClasses(activeOnly = false) {
+    return this.request<any>(`/classes${activeOnly ? '' : '?active=false'}`);
   }
 
   async getClass(id: number) {

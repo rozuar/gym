@@ -210,17 +210,19 @@ func (r *ClassRepository) ListSchedules(from, to time.Time) ([]*models.ScheduleW
 
 func (r *ClassRepository) GenerateWeekSchedules(startDate time.Time) error {
 	query := `INSERT INTO class_schedules (class_id, date, capacity)
-			  SELECT c.id, $1::date + c.day_of_week, c.capacity
+			  SELECT c.id, $1::date, c.capacity
 			  FROM classes c
 			  WHERE c.active = true
+			  AND c.day_of_week = $2
 			  AND NOT EXISTS (
 				  SELECT 1 FROM class_schedules cs
-				  WHERE cs.class_id = c.id AND cs.date = $1::date + c.day_of_week
+				  WHERE cs.class_id = c.id AND cs.date = $1::date
 			  )`
 
 	for i := 0; i < 7; i++ {
 		date := startDate.AddDate(0, 0, i)
-		_, err := r.db.Exec(query, date)
+		dayOfWeek := int(date.Weekday()) // Sunday=0, Monday=1, ... matches DB convention
+		_, err := r.db.Exec(query, date, dayOfWeek)
 		if err != nil {
 			return err
 		}
