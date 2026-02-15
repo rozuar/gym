@@ -14,6 +14,7 @@ export default function SchedulesPage() {
   const [attendanceForId, setAttendanceForId] = useState<number | null>(null);
   const [attendanceData, setAttendanceData] = useState<{ schedule: any; bookings: any[] } | null>(null);
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
+  const [cancellingSchedule, setCancellingSchedule] = useState<number | null>(null);
 
   useEffect(() => {
     loadSchedules();
@@ -26,7 +27,7 @@ export default function SchedulesPage() {
       to.setDate(to.getDate() + 14);
       const fromStr = from.toISOString().slice(0, 10);
       const toStr = to.toISOString().slice(0, 10);
-      const data = await api.getSchedules(fromStr, toStr);
+      const data = await api.getSchedules(fromStr, toStr, true);
       setSchedules(data.schedules || []);
     } finally {
       setLoading(false);
@@ -59,6 +60,24 @@ export default function SchedulesPage() {
     } catch (err) {
       alert('Error al cargar asistencia');
       setAttendanceForId(null);
+    }
+  };
+
+  const handleCancelSchedule = async (scheduleId: number, booked: number) => {
+    const msg = booked > 0
+      ? `¿Cancelar esta clase? Se cancelarán ${booked} reserva(s) y se devolverán créditos.`
+      : '¿Cancelar esta clase?';
+    if (!confirm(msg)) return;
+
+    setCancellingSchedule(scheduleId);
+    try {
+      const result = await api.cancelSchedule(scheduleId);
+      alert(`Clase cancelada. ${result.cancelled_bookings} reserva(s) cancelada(s).`);
+      await loadSchedules();
+    } catch (err: any) {
+      alert(err.message || 'Error al cancelar clase');
+    } finally {
+      setCancellingSchedule(null);
     }
   };
 
@@ -114,10 +133,15 @@ export default function SchedulesPage() {
                 <h2 className="text-lg font-semibold mb-3">{dayName} {formatted}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map((schedule: any) => (
-                    <Card key={schedule.id}>
+                    <Card key={schedule.id} className={schedule.cancelled ? 'opacity-60' : ''}>
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="font-semibold">{schedule.class_name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{schedule.class_name}</h3>
+                            {schedule.cancelled && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">Cancelada</span>
+                            )}
+                          </div>
                           <p className="text-sm text-zinc-400">{schedule.discipline_name}</p>
                         </div>
                         <span className="text-sm bg-zinc-700 px-2 py-1 rounded">
@@ -131,13 +155,27 @@ export default function SchedulesPage() {
                         <span className={`text-sm ${schedule.available > 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {schedule.available} disponibles
                         </span>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => openAttendance(schedule.id)}
-                        >
-                          {attendanceForId === schedule.id ? 'Cerrar' : 'Asistencia'}
-                        </Button>
+                        <div className="flex gap-2">
+                          {!schedule.cancelled && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => openAttendance(schedule.id)}
+                              >
+                                {attendanceForId === schedule.id ? 'Cerrar' : 'Asistencia'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                loading={cancellingSchedule === schedule.id}
+                                onClick={() => handleCancelSchedule(schedule.id, schedule.booked)}
+                              >
+                                Cancelar clase
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       {attendanceForId === schedule.id && attendanceData && (
                         <div className="mt-3 pt-3 border-t border-zinc-700">

@@ -14,8 +14,8 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<number | null>(null);
-  const [photoUrl, setPhotoUrl] = useState('');
   const [addingPhotoId, setAddingPhotoId] = useState<number | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -38,20 +38,19 @@ export default function BookingsPage() {
     }
   };
 
-  const handleAddPhoto = async (bookingId: number) => {
-    if (!photoUrl.trim()) {
-      alert('Ingresa la URL de la foto');
-      return;
-    }
+  const handleAddPhoto = async (bookingId: number, file: File) => {
     setAddingPhotoId(bookingId);
+    setUploadingPhoto(true);
     try {
-      await api.setBookingBeforePhoto(bookingId, photoUrl.trim());
-      setPhotoUrl('');
+      const { url } = await api.uploadImage(file);
+      await api.setBookingBeforePhoto(bookingId, url);
       setAddingPhotoId(null);
       await loadBookings();
     } catch (err: any) {
       alert(err.message || 'Error al agregar foto');
       setAddingPhotoId(null);
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -146,23 +145,19 @@ export default function BookingsPage() {
                 <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                   {showPhotoOption && (
                     <div className="flex gap-2 items-center flex-wrap">
-                      <input
-                        type="url"
-                        placeholder="Pega URL de la foto (sube a imgbb.com u otro)"
-                        value={addingPhotoId === booking.id ? photoUrl : ''}
-                        onChange={(e) => { setAddingPhotoId(booking.id); setPhotoUrl(e.target.value); }}
-                        onFocus={() => setAddingPhotoId(booking.id)}
-                        className="px-3 py-1.5 bg-zinc-800 border border-zinc-600 rounded text-sm min-w-[180px]"
-                      />
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        loading={addingPhotoId === booking.id}
-                        onClick={() => handleAddPhoto(booking.id)}
-                        disabled={!photoUrl.trim()}
-                      >
-                        Agregar foto
-                      </Button>
+                      <label className="cursor-pointer px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm font-medium transition-colors">
+                        {uploadingPhoto && addingPhotoId === booking.id ? 'Subiendo...' : 'Subir foto'}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          disabled={uploadingPhoto}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAddPhoto(booking.id, file);
+                          }}
+                        />
+                      </label>
                     </div>
                   )}
                   {booking.status === 'booked' && (

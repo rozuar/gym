@@ -73,6 +73,7 @@ type ClassRepo interface {
 	CheckIn(bookingID int64) error
 	SetBookingBeforePhoto(bookingID, userID int64, photoURL string) error
 	ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error)
+	CancelSchedule(scheduleID int64) ([]*models.BookingWithUser, error)
 	GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error)
 }
 

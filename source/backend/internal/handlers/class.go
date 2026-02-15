@@ -9,6 +9,7 @@ import (
 	"boxmagic/internal/middleware"
 	"boxmagic/internal/models"
 	"boxmagic/internal/repository"
+	"boxmagic/internal/services"
 )
 
 type ClassHandler struct {
@@ -16,14 +17,16 @@ type ClassHandler struct {
 	paymentRepo    repository.PaymentRepo
 	instructorRepo repository.InstructorRepo
 	userRepo       repository.UserRepo
+	emailService   *services.EmailService
 }
 
-func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.PaymentRepo, instructorRepo repository.InstructorRepo, userRepo repository.UserRepo) *ClassHandler {
+func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.PaymentRepo, instructorRepo repository.InstructorRepo, userRepo repository.UserRepo, emailService *services.EmailService) *ClassHandler {
 	return &ClassHandler{
 		classRepo:      classRepo,
 		paymentRepo:    paymentRepo,
 		instructorRepo: instructorRepo,
 		userRepo:       userRepo,
+		emailService:   emailService,
 	}
 }
 
@@ -316,6 +319,19 @@ func (h *ClassHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to fetch schedules")
 		return
 	}
+
+	// Include cancelled schedules if requested (for backoffice)
+	includeCancelled := r.URL.Query().Get("include_cancelled") == "true"
+	if !includeCancelled {
+		filtered := make([]*models.ScheduleWithDetails, 0, len(schedules))
+		for _, s := range schedules {
+			if !s.Cancelled {
+				filtered = append(filtered, s)
+			}
+		}
+		schedules = filtered
+	}
+
 	if schedules == nil {
 		schedules = []*models.ScheduleWithDetails{}
 	}
@@ -400,6 +416,15 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send booking confirmation email
+	if h.emailService != nil {
+		if sched, err := h.classRepo.GetScheduleByID(scheduleID); err == nil {
+			if u, err := h.userRepo.GetByID(userID); err == nil {
+				go h.emailService.SendBookingConfirmation(u.Email, u.Name, sched.ClassName, sched.Date.Format("02/01/2006"), sched.StartTime)
+			}
+		}
+	}
+
 	respondJSON(w, http.StatusCreated, booking)
 }
 
@@ -412,10 +437,34 @@ func (h *ClassHandler) CancelBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get booking details before cancelling (for email)
+	var bookingEmail, bookingUserName, bookingClassName, bookingDate, bookingTime string
+	if h.emailService != nil {
+		if userBookings, err := h.classRepo.ListUserBookings(userID, false); err == nil {
+			for _, ub := range userBookings {
+				if ub.ID == bookingID {
+					bookingClassName = ub.ClassName
+					bookingDate = ub.ScheduleDate.Format("02/01/2006")
+					bookingTime = ub.StartTime
+					break
+				}
+			}
+		}
+		if u, err := h.userRepo.GetByID(userID); err == nil {
+			bookingEmail = u.Email
+			bookingUserName = u.Name
+		}
+	}
+
 	_, err = h.classRepo.CancelBooking(bookingID, userID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Booking not found or already cancelled")
 		return
+	}
+
+	// Send cancellation email
+	if h.emailService != nil && bookingEmail != "" {
+		go h.emailService.SendBookingCancellation(bookingEmail, bookingUserName, bookingClassName, bookingDate, bookingTime)
 	}
 
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Booking cancelled"})
@@ -501,5 +550,35 @@ func (h *ClassHandler) GetScheduleAttendance(w http.ResponseWriter, r *http.Requ
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"schedule": schedule,
 		"bookings": bookings,
+	})
+}
+
+func (h *ClassHandler) CancelSchedule(w http.ResponseWriter, r *http.Request) {
+	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid schedule ID")
+		return
+	}
+
+	// Get schedule details before cancelling (for email notifications)
+	schedule, _ := h.classRepo.GetScheduleByID(scheduleID)
+
+	cancelledBookings, err := h.classRepo.CancelSchedule(scheduleID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "Schedule not found or already cancelled")
+		return
+	}
+
+	// Send email notifications asynchronously
+	if h.emailService != nil && schedule != nil {
+		dateStr := schedule.Date.Format("02/01/2006")
+		for _, b := range cancelledBookings {
+			go h.emailService.SendClassCancelled(b.UserEmail, b.UserName, schedule.ClassName, dateStr, schedule.StartTime)
+		}
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"message":            "Clase cancelada",
+		"cancelled_bookings": len(cancelledBookings),
 	})
 }

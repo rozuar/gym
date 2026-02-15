@@ -20,6 +20,7 @@ export default function PaymentsPage() {
   const [formProofUrl, setFormProofUrl] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const [userSearch, setUserSearch] = useState('');
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function PaymentsPage() {
       return;
     }
     if (formMethod === 'transferencia' && !formProofUrl) {
-      setFormError('Transferencia requiere URL de comprobante');
+      setFormError('Transferencia requiere comprobante (sube una imagen)');
       return;
     }
     setSubmitting(true);
@@ -238,14 +239,30 @@ export default function PaymentsPage() {
 
             {formMethod === 'transferencia' && (
               <div>
-                <label className="block text-sm text-zinc-400 mb-1">URL comprobante</label>
+                <label className="block text-sm text-zinc-400 mb-1">Comprobante de transferencia</label>
+                {formProofUrl && (
+                  <img src={formProofUrl} alt="Comprobante" className="w-24 h-24 object-cover rounded mb-2" />
+                )}
                 <input
-                  type="text"
-                  value={formProofUrl}
-                  onChange={(e) => setFormProofUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 bg-zinc-700 rounded text-sm"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={uploadingProof}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setUploadingProof(true);
+                    try {
+                      const { url } = await api.uploadImage(file);
+                      setFormProofUrl(url);
+                    } catch {
+                      setFormError('Error al subir comprobante');
+                    } finally {
+                      setUploadingProof(false);
+                    }
+                  }}
+                  className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
                 />
+                {uploadingProof && <p className="text-xs text-zinc-500 mt-1">Subiendo...</p>}
               </div>
             )}
 

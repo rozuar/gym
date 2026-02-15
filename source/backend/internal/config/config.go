@@ -15,6 +15,18 @@ type Config struct {
 	Environment           string
 	InvitationClassPrice  int64 // Valor CLP de 1 clase invitación (variable global)
 	BeforeClassPhotoPrice int64 // Costo adicional CLP por foto antes de clase/rutina
+
+	// Upload
+	UploadDir string
+	BaseURL   string
+
+	// SMTP
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPass     string
+	SMTPFrom     string
+	EmailEnabled bool
 }
 
 func Load() *Config {
@@ -27,6 +39,7 @@ func Load() *Config {
 	if photoPrice < 0 {
 		photoPrice = 5000
 	}
+	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
 
 	return &Config{
 		Port:                  port,
@@ -37,6 +50,14 @@ func Load() *Config {
 		Environment:           getEnv("API_ENV", "development"),
 		InvitationClassPrice:  invPrice,
 		BeforeClassPhotoPrice: photoPrice,
+		UploadDir:             getEnv("UPLOAD_DIR", "./uploads"),
+		BaseURL:               getEnv("BASE_URL", "http://localhost:"+port),
+		SMTPHost:              getEnv("SMTP_HOST", ""),
+		SMTPPort:              smtpPort,
+		SMTPUser:              getEnv("SMTP_USER", ""),
+		SMTPPass:              getEnv("SMTP_PASS", ""),
+		SMTPFrom:              getEnv("SMTP_FROM", "Box Magic <noreply@boxmagic.cl>"),
+		EmailEnabled:          getEnv("EMAIL_ENABLED", "false") == "true",
 	}
 }
 

@@ -203,10 +203,11 @@ class ApiClient {
   }
 
   // Schedules
-  async getSchedules(from?: string, to?: string) {
+  async getSchedules(from?: string, to?: string, includeCancelled?: boolean) {
     const params = new URLSearchParams();
     if (from) params.append('from', from);
     if (to) params.append('to', to);
+    if (includeCancelled) params.append('include_cancelled', 'true');
     return this.request<any>(`/schedules?${params}`);
   }
 
@@ -322,6 +323,26 @@ class ApiClient {
   async getMonthlyReport(month?: string) {
     const query = month ? `?month=${month}` : '';
     return this.request<any>(`/stats/report${query}`);
+  }
+
+  async seedDemoUser() {
+    return this.request<{ message: string }>('/admin/seed-demo-user', { method: 'POST' });
+  }
+
+  async cancelSchedule(id: number) {
+    return this.request<{ message: string; cancelled_bookings: number }>(`/schedules/${id}/cancel`, { method: 'POST' });
+  }
+
+  async uploadImage(file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {},
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Error al subir imagen');
+    return res.json();
   }
 }
 

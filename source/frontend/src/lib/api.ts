@@ -224,6 +224,18 @@ class ApiClient {
   async getRoutineHistory(routineId: number) {
     return this.request<{ history: any[] }>(`/routines/${routineId}/history`);
   }
+
+  async uploadImage(file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {},
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Error al subir imagen');
+    return res.json();
+  }
 }
 
 export const api = new ApiClient();

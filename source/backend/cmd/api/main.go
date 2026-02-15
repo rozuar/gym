@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"boxmagic/internal/config"
 	"boxmagic/internal/handlers"
@@ -39,16 +40,23 @@ func main() {
 	statsRepo := repository.NewStatsRepository(db)
 
 	authService := services.NewAuthService(userRepo, cfg)
+	emailService := services.NewEmailService(cfg)
+
+	// Ensure upload directory exists
+	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
+		log.Fatal("Failed to create upload directory:", err)
+	}
 
 	configHandler := handlers.NewConfigHandler(cfg)
 	authHandler := handlers.NewAuthHandler(authService)
 	userHandler := handlers.NewUserHandler(userRepo)
 	planHandler := handlers.NewPlanHandler(planRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentRepo, planRepo, userRepo)
-	classHandler := handlers.NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	classHandler := handlers.NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, emailService)
 	routineHandler := handlers.NewRoutineHandler(routineRepo)
 	instructorHandler := handlers.NewInstructorHandler(instructorRepo)
 	statsHandler := handlers.NewStatsHandler(statsRepo)
+	uploadHandler := handlers.NewUploadHandler(cfg)
 
 	// Public routes
 	mux.HandleFunc("GET /api/v1/config", configHandler.Get)
@@ -59,6 +67,7 @@ func main() {
 	// Dev only: seed test data (requires API_ENV=development)
 	mux.HandleFunc("POST /api/v1/dev/seed-users", handlers.SeedTestUsers(db, cfg))
 	mux.HandleFunc("POST /api/v1/dev/seed-all", handlers.SeedAllDevData(db, cfg))
+	mux.Handle("POST /api/v1/admin/seed-demo-user", middleware.Auth(cfg)(middleware.AdminOnly(handlers.SeedDemoUser(db, cfg))))
 
 	// Plans (public read, admin write)
 	mux.HandleFunc("GET /api/v1/plans", planHandler.List)
@@ -97,6 +106,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/schedules", classHandler.ListSchedules)
 	mux.Handle("POST /api/v1/schedules/generate", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.GenerateSchedules))))
 	mux.Handle("GET /api/v1/schedules/{id}/attendance", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.GetScheduleAttendance))))
+	mux.Handle("POST /api/v1/schedules/{id}/cancel", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.CancelSchedule))))
 
 	// Bookings
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/book", middleware.Auth(cfg)(http.HandlerFunc(classHandler.CreateBooking)))
@@ -147,6 +157,12 @@ func main() {
 	// Exports (admin only)
 	mux.Handle("GET /api/v1/export/users", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.ExportUsers))))
 	mux.Handle("GET /api/v1/export/revenue", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.ExportRevenue))))
+
+	// Upload
+	mux.Handle("POST /api/v1/upload", middleware.Auth(cfg)(http.HandlerFunc(uploadHandler.Upload)))
+
+	// Static files (uploads)
+	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 
 	// Health check
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {

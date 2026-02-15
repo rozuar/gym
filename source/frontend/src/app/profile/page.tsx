@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', avatar_url: '' });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -128,12 +130,34 @@ export default function ProfilePage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
-              <Input
-                label="Foto de perfil (URL)"
-                value={formData.avatar_url}
-                onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                placeholder="https://..."
-              />
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Foto de perfil</label>
+                {(avatarPreview || formData.avatar_url) && (
+                  <img src={avatarPreview || formData.avatar_url} alt="Preview" className="w-20 h-20 rounded-full object-cover mb-2" />
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={uploadingAvatar}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setAvatarPreview(URL.createObjectURL(file));
+                    setUploadingAvatar(true);
+                    try {
+                      const { url } = await api.uploadImage(file);
+                      setFormData((prev) => ({ ...prev, avatar_url: url }));
+                    } catch {
+                      alert('Error al subir imagen');
+                      setAvatarPreview(null);
+                    } finally {
+                      setUploadingAvatar(false);
+                    }
+                  }}
+                  className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600"
+                />
+                {uploadingAvatar && <p className="text-xs text-zinc-500 mt-1">Subiendo...</p>}
+              </div>
               <div className="flex gap-2">
                 <Button onClick={handleSave} loading={saving}>
                   Guardar

@@ -68,6 +68,9 @@ func (m *mockClassRepo) SetBookingBeforePhoto(bookingID, userID int64, photoURL 
 func (m *mockClassRepo) ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error) {
 	return m.listUserBookings, m.listUserBookingsErr
 }
+func (m *mockClassRepo) CancelSchedule(scheduleID int64) ([]*models.BookingWithUser, error) {
+	return nil, nil
+}
 func (m *mockClassRepo) GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error) {
 	return nil, nil
 }
@@ -122,7 +125,7 @@ func TestClassHandler_CreateDiscipline_InvalidBody(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/disciplines", bytes.NewReader([]byte("invalid")))
 	req.Header.Set("Content-Type", "application/json")
@@ -141,7 +144,7 @@ func TestClassHandler_CreateDiscipline_NameRequired(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	body := `{"description":"test"}`
 	req := httptest.NewRequest("POST", "/api/v1/disciplines", bytes.NewReader([]byte(body)))
@@ -161,7 +164,7 @@ func TestClassHandler_CreateDiscipline_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	body := `{"name":"CrossFit","description":"CF","color":"#FF0000"}`
 	req := httptest.NewRequest("POST", "/api/v1/disciplines", bytes.NewReader([]byte(body)))
@@ -181,7 +184,7 @@ func TestClassHandler_ListDisciplines_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/disciplines", nil)
 	rr := httptest.NewRecorder()
@@ -198,7 +201,7 @@ func TestClassHandler_CreateClass_InvalidBody(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	req := httptest.NewRequest("POST", "/api/v1/classes", bytes.NewReader([]byte("invalid")))
 	req.Header.Set("Content-Type", "application/json")
@@ -217,7 +220,7 @@ func TestClassHandler_CreateClass_MissingFields(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	body := `{"discipline_id":1}`
 	req := httptest.NewRequest("POST", "/api/v1/classes", bytes.NewReader([]byte(body)))
@@ -237,7 +240,7 @@ func TestClassHandler_CreateClass_TooManyInstructors(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	body := `{"discipline_id":1,"name":"WOD","capacity":12,"instructor_ids":[1,2,3]}`
 	req := httptest.NewRequest("POST", "/api/v1/classes", bytes.NewReader([]byte(body)))
@@ -257,7 +260,7 @@ func TestClassHandler_CreateClass_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	body := `{"discipline_id":1,"name":"WOD Mañana","capacity":12,"day_of_week":1,"start_time":"09:00","end_time":"10:00"}`
 	req := httptest.NewRequest("POST", "/api/v1/classes", bytes.NewReader([]byte(body)))
@@ -277,7 +280,7 @@ func TestClassHandler_CreateBooking_NoSubscription(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{getActiveSubscriptionErr: errors.New("none")}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/book", http.HandlerFunc(handler.CreateBooking))
@@ -303,7 +306,7 @@ func TestClassHandler_CreateBooking_ClassLimitReached(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{getActiveSubscription: sub}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/book", http.HandlerFunc(handler.CreateBooking))
@@ -329,7 +332,7 @@ func TestClassHandler_CreateBooking_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{getActiveSubscription: sub}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/book", http.HandlerFunc(handler.CreateBooking))
@@ -354,7 +357,7 @@ func TestClassHandler_CancelBooking_InvalidID(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("DELETE /api/v1/bookings/{id}", http.HandlerFunc(handler.CancelBooking))
@@ -375,7 +378,7 @@ func TestClassHandler_CancelBooking_NotFound(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("DELETE /api/v1/bookings/{id}", http.HandlerFunc(handler.CancelBooking))
@@ -396,7 +399,7 @@ func TestClassHandler_CancelBooking_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	mux := http.NewServeMux()
 	mux.Handle("DELETE /api/v1/bookings/{id}", http.HandlerFunc(handler.CancelBooking))
@@ -417,7 +420,7 @@ func TestClassHandler_MyBookings_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/bookings/me", nil)
 	req = classRequestWithAuth(req, 1)
@@ -435,7 +438,7 @@ func TestClassHandler_ListSchedules_Success(t *testing.T) {
 	paymentRepo := &mockPaymentRepo{}
 	instructorRepo := &mockInstructorRepo{}
 	userRepo := &mockUserRepo{}
-	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo)
+	handler := NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, nil)
 
 	req := httptest.NewRequest("GET", "/api/v1/schedules", nil)
 	rr := httptest.NewRecorder()

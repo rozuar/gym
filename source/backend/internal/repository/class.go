@@ -201,7 +201,7 @@ func (r *ClassRepository) ListSchedules(from, to time.Time) ([]*models.ScheduleW
 			  FROM class_schedules cs
 			  JOIN classes c ON cs.class_id = c.id
 			  JOIN disciplines d ON c.discipline_id = d.id
-			  WHERE cs.date >= $1 AND cs.date <= $2 AND cs.cancelled = false
+			  WHERE cs.date >= $1 AND cs.date <= $2
 			  ORDER BY cs.date, c.start_time`
 
 	rows, err := r.db.Query(query, from, to)
@@ -420,6 +420,76 @@ func (r *ClassRepository) ListUserBookings(userID int64, upcoming bool) ([]*mode
 		}
 		bookings = append(bookings, b)
 	}
+	return bookings, nil
+}
+
+func (r *ClassRepository) CancelSchedule(scheduleID int64) ([]*models.BookingWithUser, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Mark schedule as cancelled
+	res, err := tx.Exec("UPDATE class_schedules SET cancelled = true WHERE id = $1 AND cancelled = false", scheduleID)
+	if err != nil {
+		return nil, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return nil, errors.New("schedule not found or already cancelled")
+	}
+
+	// Get all active bookings
+	rows, err := tx.Query(`SELECT b.id, b.user_id, b.class_schedule_id, b.subscription_id, b.status, b.checked_in_at, COALESCE(b.before_photo_url,''), b.created_at,
+		u.name, u.email
+		FROM bookings b JOIN users u ON b.user_id = u.id
+		WHERE b.class_schedule_id = $1 AND b.status = 'booked'`, scheduleID)
+	if err != nil {
+		return nil, err
+	}
+
+	var bookings []*models.BookingWithUser
+	for rows.Next() {
+		b := &models.BookingWithUser{}
+		var subID sql.NullInt64
+		if err := rows.Scan(&b.ID, &b.UserID, &b.ClassScheduleID, &subID, &b.Status, &b.CheckedInAt, &b.BeforePhotoURL, &b.CreatedAt, &b.UserName, &b.UserEmail); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if subID.Valid {
+			b.SubscriptionID = &subID.Int64
+		}
+		bookings = append(bookings, b)
+	}
+	rows.Close()
+
+	// Cancel each booking and restore credits
+	for _, b := range bookings {
+		_, err := tx.Exec("UPDATE bookings SET status = 'cancelled' WHERE id = $1", b.ID)
+		if err != nil {
+			return nil, err
+		}
+		if b.SubscriptionID != nil {
+			_, err = tx.Exec("UPDATE subscriptions SET classes_used = GREATEST(classes_used - 1, 0) WHERE id = $1", *b.SubscriptionID)
+		} else {
+			_, err = tx.Exec("UPDATE users SET invitation_classes = invitation_classes + 1 WHERE id = $1", b.UserID)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Reset booked count
+	_, err = tx.Exec("UPDATE class_schedules SET booked = 0 WHERE id = $1", scheduleID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	return bookings, nil
 }
 
