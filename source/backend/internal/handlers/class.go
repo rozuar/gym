@@ -553,6 +553,59 @@ func (h *ClassHandler) GetScheduleAttendance(w http.ResponseWriter, r *http.Requ
 	})
 }
 
+// Waitlist
+
+func (h *ClassHandler) JoinWaitlist(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid schedule ID")
+		return
+	}
+
+	entry, err := h.classRepo.JoinWaitlist(userID, scheduleID)
+	if err != nil {
+		respondError(w, http.StatusConflict, "Already on waitlist or failed to join")
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, entry)
+}
+
+func (h *ClassHandler) LeaveWaitlist(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid schedule ID")
+		return
+	}
+
+	if err := h.classRepo.LeaveWaitlist(userID, scheduleID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to leave waitlist")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Left waitlist"})
+}
+
+func (h *ClassHandler) GetWaitlist(w http.ResponseWriter, r *http.Request) {
+	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid schedule ID")
+		return
+	}
+
+	entries, err := h.classRepo.GetWaitlist(scheduleID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch waitlist")
+		return
+	}
+	if entries == nil {
+		entries = []*models.WaitlistEntryWithUser{}
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{"waitlist": entries})
+}
+
 func (h *ClassHandler) CancelSchedule(w http.ResponseWriter, r *http.Request) {
 	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {

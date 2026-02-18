@@ -278,6 +278,42 @@ func Migrate(db *sql.DB) error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_authorizations_user ON authorizations(user_id);
+
+	-- Waitlist
+	CREATE TABLE IF NOT EXISTS waitlist (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		class_schedule_id INTEGER REFERENCES class_schedules(id) ON DELETE CASCADE,
+		position INTEGER NOT NULL,
+		promoted_at TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(user_id, class_schedule_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_waitlist_schedule ON waitlist(class_schedule_id);
+	CREATE INDEX IF NOT EXISTS idx_waitlist_user ON waitlist(user_id);
+
+	-- Fistbumps (likes on results)
+	CREATE TABLE IF NOT EXISTS fistbumps (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		result_id INTEGER REFERENCES user_routine_results(id) ON DELETE CASCADE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(user_id, result_id)
+	);
+
+	-- Feed events
+	CREATE TABLE IF NOT EXISTS feed_events (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		event_type VARCHAR(50) NOT NULL,
+		ref_id INTEGER,
+		data_json TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_feed_events_date ON feed_events(created_at DESC);
+
+	-- PR flag on results
+	ALTER TABLE user_routine_results ADD COLUMN IF NOT EXISTS is_pr BOOLEAN DEFAULT false;
 	`
 
 	_, err := db.Exec(query)

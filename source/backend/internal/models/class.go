@@ -108,3 +108,35 @@ type BookingWithUser struct {
 	UserName  string `json:"user_name"`
 	UserEmail string `json:"user_email"`
 }
+
+// Waitlist
+
+type WaitlistEntry struct {
+	ID              int64      `json:"id"`
+	UserID          int64      `json:"user_id"`
+	ClassScheduleID int64      `json:"class_schedule_id"`
+	Position        int        `json:"position"`
+	PromotedAt      *time.Time `json:"promoted_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+}
+
+type WaitlistEntryWithUser struct {
+	WaitlistEntry
+	UserName  string `json:"user_name"`
+	UserEmail string `json:"user_email"`
+}
+
+// TV Display
+
+type TVSchedule struct {
+	ScheduleWithDetails
+	RoutineName    string             `json:"routine_name,omitempty"`
+	RoutineType    string             `json:"routine_type,omitempty"`
+	RoutineContent string             `json:"routine_content,omitempty"`
+	Leaderboard    []*LeaderboardEntry `json:"leaderboard,omitempty"`
+}
+
+type TVResponse struct {
+	Date      string        `json:"date"`
+	Schedules []*TVSchedule `json:"schedules"`
+}

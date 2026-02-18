@@ -35,9 +35,10 @@ type UserRoutineResult struct {
 	UserID          int64     `json:"user_id"`
 	RoutineID       int64     `json:"routine_id"`
 	ClassScheduleID *int64    `json:"class_schedule_id,omitempty"`
-	Score           string    `json:"score,omitempty"` // tiempo, reps, peso, etc.
+	Score           string    `json:"score,omitempty"`
 	Notes           string    `json:"notes,omitempty"`
 	Rx              bool      `json:"rx"`
+	IsPR            bool      `json:"is_pr"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 
@@ -107,7 +108,19 @@ type ScheduleRoutineWithDetails struct {
 
 type UserResultWithDetails struct {
 	UserRoutineResult
-	RoutineName  string     `json:"routine_name"`
-	RoutineType  string     `json:"routine_type"`
-	ScheduleDate *time.Time `json:"schedule_date,omitempty"`
+	RoutineName    string     `json:"routine_name"`
+	RoutineType    string     `json:"routine_type"`
+	ScheduleDate   *time.Time `json:"schedule_date,omitempty"`
+	FistbumpCount  int        `json:"fistbump_count"`
+	UserFistbumped bool       `json:"user_fistbumped"`
+}
+
+// Leaderboard
+
+type LeaderboardEntry struct {
+	UserID   int64  `json:"user_id"`
+	UserName string `json:"user_name"`
+	Score    string `json:"score"`
+	Rx       bool   `json:"rx"`
+	IsPR     bool   `json:"is_pr"`
 }

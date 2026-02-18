@@ -75,6 +75,10 @@ type ClassRepo interface {
 	ListUserBookings(userID int64, upcoming bool) ([]*models.BookingWithDetails, error)
 	CancelSchedule(scheduleID int64) ([]*models.BookingWithUser, error)
 	GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error)
+	JoinWaitlist(userID, scheduleID int64) (*models.WaitlistEntry, error)
+	LeaveWaitlist(userID, scheduleID int64) error
+	GetWaitlist(scheduleID int64) ([]*models.WaitlistEntryWithUser, error)
+	PromoteFromWaitlist(tx *sql.Tx, scheduleID int64) (*models.WaitlistEntry, error)
 }
 
 type RoutineRepo interface {
@@ -93,6 +97,15 @@ type RoutineRepo interface {
 	GetResultByID(resultID int64) (*models.UserRoutineResult, error)
 	UpdateResult(resultID int64, userID int64, score string, notes string, rx bool) error
 	DeleteResult(resultID int64, userID int64) error
+	GetUserPRs(userID int64) ([]*models.UserResultWithDetails, error)
+	GetLeaderboard(scheduleID int64) ([]*models.LeaderboardEntry, error)
+}
+
+type FeedRepo interface {
+	CreateEvent(event *models.FeedEvent) error
+	GetFeed(limit, offset int) ([]*models.FeedEventWithUser, error)
+	CreateFistbump(userID, resultID int64) (*models.Fistbump, error)
+	DeleteFistbump(userID, resultID int64) error
 }
 
 type StatsRepo interface {

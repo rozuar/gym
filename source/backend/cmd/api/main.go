@@ -37,6 +37,7 @@ func main() {
 	classRepo := repository.NewClassRepository(db)
 	routineRepo := repository.NewRoutineRepository(db)
 	instructorRepo := repository.NewInstructorRepository(db)
+	feedRepo := repository.NewFeedRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
 
 	authService := services.NewAuthService(userRepo, cfg)
@@ -53,10 +54,12 @@ func main() {
 	planHandler := handlers.NewPlanHandler(planRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentRepo, planRepo, userRepo)
 	classHandler := handlers.NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, emailService)
-	routineHandler := handlers.NewRoutineHandler(routineRepo)
+	routineHandler := handlers.NewRoutineHandler(routineRepo, feedRepo)
+	feedHandler := handlers.NewFeedHandler(feedRepo)
 	instructorHandler := handlers.NewInstructorHandler(instructorRepo)
 	statsHandler := handlers.NewStatsHandler(statsRepo)
 	uploadHandler := handlers.NewUploadHandler(cfg)
+	tvHandler := handlers.NewTVHandler(classRepo, routineRepo)
 
 	// Public routes
 	mux.HandleFunc("GET /api/v1/config", configHandler.Get)
@@ -67,8 +70,6 @@ func main() {
 	// Dev only: seed test data (requires API_ENV=development)
 	mux.HandleFunc("POST /api/v1/dev/seed-users", handlers.SeedTestUsers(db, cfg))
 	mux.HandleFunc("POST /api/v1/dev/seed-all", handlers.SeedAllDevData(db, cfg))
-	mux.Handle("POST /api/v1/admin/seed-demo-user", middleware.Auth(cfg)(middleware.AdminOnly(handlers.SeedDemoUser(db, cfg))))
-
 	// Plans (public read, admin write)
 	mux.HandleFunc("GET /api/v1/plans", planHandler.List)
 	mux.HandleFunc("GET /api/v1/plans/{id}", planHandler.GetByID)
@@ -108,6 +109,11 @@ func main() {
 	mux.Handle("GET /api/v1/schedules/{id}/attendance", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.GetScheduleAttendance))))
 	mux.Handle("POST /api/v1/schedules/{id}/cancel", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.CancelSchedule))))
 
+	// Waitlist
+	mux.Handle("POST /api/v1/schedules/{id}/waitlist", middleware.Auth(cfg)(http.HandlerFunc(classHandler.JoinWaitlist)))
+	mux.Handle("DELETE /api/v1/schedules/{id}/waitlist", middleware.Auth(cfg)(http.HandlerFunc(classHandler.LeaveWaitlist)))
+	mux.Handle("GET /api/v1/schedules/{id}/waitlist", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(classHandler.GetWaitlist))))
+
 	// Bookings
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/book", middleware.Auth(cfg)(http.HandlerFunc(classHandler.CreateBooking)))
 	mux.Handle("GET /api/v1/bookings/me", middleware.Auth(cfg)(http.HandlerFunc(classHandler.MyBookings)))
@@ -128,6 +134,17 @@ func main() {
 	mux.Handle("GET /api/v1/schedules/{scheduleId}/routine", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.GetScheduleRoutine)))
 	mux.Handle("POST /api/v1/schedules/{scheduleId}/routine", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.AssignToSchedule))))
 	mux.Handle("DELETE /api/v1/schedules/{scheduleId}/routine", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(routineHandler.RemoveScheduleRoutine))))
+
+	// Feed
+	mux.Handle("GET /api/v1/feed", middleware.Auth(cfg)(http.HandlerFunc(feedHandler.GetFeed)))
+	mux.Handle("POST /api/v1/fistbump", middleware.Auth(cfg)(http.HandlerFunc(feedHandler.CreateFistbump)))
+	mux.Handle("DELETE /api/v1/fistbump", middleware.Auth(cfg)(http.HandlerFunc(feedHandler.DeleteFistbump)))
+
+	// PRs
+	mux.Handle("GET /api/v1/prs/me", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.MyPRs)))
+
+	// Leaderboard
+	mux.Handle("GET /api/v1/schedules/{id}/leaderboard", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.GetLeaderboard)))
 
 	// Results
 	mux.Handle("POST /api/v1/results", middleware.Auth(cfg)(http.HandlerFunc(routineHandler.LogResult)))
@@ -163,6 +180,9 @@ func main() {
 
 	// Static files (uploads)
 	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
+
+	// TV Display (public)
+	mux.HandleFunc("GET /api/v1/tv/today", tvHandler.GetToday)
 
 	// Health check
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"boxmagic/internal/models"
@@ -354,6 +355,19 @@ func (r *ClassRepository) CancelBooking(bookingID, userID int64) (*int64, error)
 		}
 	}
 
+	// Auto-promote from waitlist
+	promoted, err := r.PromoteFromWaitlist(tx, scheduleID)
+	if err != nil {
+		log.Printf("waitlist promote error (non-fatal): %v", err)
+	}
+	if promoted != nil {
+		// Create booking for promoted user (no credit action — they'll use their own)
+		_, err = tx.Exec(`INSERT INTO bookings (user_id, class_schedule_id, status) VALUES ($1, $2, 'booked')`, promoted.UserID, scheduleID)
+		if err == nil {
+			tx.Exec("UPDATE class_schedules SET booked = booked + 1 WHERE id = $1", scheduleID)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -519,4 +533,73 @@ func (r *ClassRepository) GetScheduleBookings(scheduleID int64) ([]*models.Booki
 		bookings = append(bookings, b)
 	}
 	return bookings, nil
+}
+
+// Waitlist
+
+func (r *ClassRepository) JoinWaitlist(userID, scheduleID int64) (*models.WaitlistEntry, error) {
+	var maxPos sql.NullInt64
+	r.db.QueryRow("SELECT MAX(position) FROM waitlist WHERE class_schedule_id = $1 AND promoted_at IS NULL", scheduleID).Scan(&maxPos)
+	pos := 1
+	if maxPos.Valid {
+		pos = int(maxPos.Int64) + 1
+	}
+
+	entry := &models.WaitlistEntry{
+		UserID:          userID,
+		ClassScheduleID: scheduleID,
+		Position:        pos,
+	}
+	err := r.db.QueryRow(
+		`INSERT INTO waitlist (user_id, class_schedule_id, position) VALUES ($1, $2, $3) RETURNING id, created_at`,
+		userID, scheduleID, pos,
+	).Scan(&entry.ID, &entry.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
+func (r *ClassRepository) LeaveWaitlist(userID, scheduleID int64) error {
+	_, err := r.db.Exec("DELETE FROM waitlist WHERE user_id = $1 AND class_schedule_id = $2 AND promoted_at IS NULL", userID, scheduleID)
+	return err
+}
+
+func (r *ClassRepository) GetWaitlist(scheduleID int64) ([]*models.WaitlistEntryWithUser, error) {
+	rows, err := r.db.Query(
+		`SELECT w.id, w.user_id, w.class_schedule_id, w.position, w.promoted_at, w.created_at, u.name, u.email
+		 FROM waitlist w JOIN users u ON w.user_id = u.id
+		 WHERE w.class_schedule_id = $1 AND w.promoted_at IS NULL
+		 ORDER BY w.position`, scheduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []*models.WaitlistEntryWithUser
+	for rows.Next() {
+		e := &models.WaitlistEntryWithUser{}
+		if err := rows.Scan(&e.ID, &e.UserID, &e.ClassScheduleID, &e.Position, &e.PromotedAt, &e.CreatedAt, &e.UserName, &e.UserEmail); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
+func (r *ClassRepository) PromoteFromWaitlist(tx *sql.Tx, scheduleID int64) (*models.WaitlistEntry, error) {
+	entry := &models.WaitlistEntry{}
+	err := tx.QueryRow(
+		`UPDATE waitlist SET promoted_at = NOW()
+		 WHERE id = (SELECT id FROM waitlist WHERE class_schedule_id = $1 AND promoted_at IS NULL ORDER BY position LIMIT 1)
+		 RETURNING id, user_id, class_schedule_id, position, promoted_at, created_at`,
+		scheduleID,
+	).Scan(&entry.ID, &entry.UserID, &entry.ClassScheduleID, &entry.Position, &entry.PromotedAt, &entry.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return entry, nil
 }

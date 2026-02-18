@@ -12,12 +12,15 @@ import (
 
 type RoutineHandler struct {
 	routineRepo repository.RoutineRepo
+	feedRepo    repository.FeedRepo
 }
 
-func NewRoutineHandler(routineRepo repository.RoutineRepo) *RoutineHandler {
-	return &RoutineHandler{
-		routineRepo: routineRepo,
+func NewRoutineHandler(routineRepo repository.RoutineRepo, feedRepo ...repository.FeedRepo) *RoutineHandler {
+	h := &RoutineHandler{routineRepo: routineRepo}
+	if len(feedRepo) > 0 {
+		h.feedRepo = feedRepo[0]
 	}
+	return h
 }
 
 func (h *RoutineHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -307,6 +310,20 @@ func (h *RoutineHandler) LogResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create feed event
+	if h.feedRepo != nil {
+		eventType := "result"
+		if result.IsPR {
+			eventType = "pr"
+		}
+		go h.feedRepo.CreateEvent(&models.FeedEvent{
+			UserID:    userID,
+			EventType: eventType,
+			RefID:     &result.ID,
+			DataJSON:  `{"routine_id":` + strconv.FormatInt(req.RoutineID, 10) + `,"score":"` + req.Score + `"}`,
+		})
+	}
+
 	respondJSON(w, http.StatusCreated, result)
 }
 
@@ -368,6 +385,38 @@ func (h *RoutineHandler) UserResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{"results": results})
+}
+
+func (h *RoutineHandler) MyPRs(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
+	prs, err := h.routineRepo.GetUserPRs(userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch PRs")
+		return
+	}
+	if prs == nil {
+		prs = []*models.UserResultWithDetails{}
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{"prs": prs})
+}
+
+func (h *RoutineHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	scheduleID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid schedule ID")
+		return
+	}
+
+	entries, err := h.routineRepo.GetLeaderboard(scheduleID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch leaderboard")
+		return
+	}
+	if entries == nil {
+		entries = []*models.LeaderboardEntry{}
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{"leaderboard": entries})
 }
 
 func (h *RoutineHandler) GetRoutineHistory(w http.ResponseWriter, r *http.Request) {

@@ -74,6 +74,16 @@ func (m *mockClassRepo) CancelSchedule(scheduleID int64) ([]*models.BookingWithU
 func (m *mockClassRepo) GetScheduleBookings(scheduleID int64) ([]*models.BookingWithUser, error) {
 	return nil, nil
 }
+func (m *mockClassRepo) JoinWaitlist(userID, scheduleID int64) (*models.WaitlistEntry, error) {
+	return nil, nil
+}
+func (m *mockClassRepo) LeaveWaitlist(userID, scheduleID int64) error { return nil }
+func (m *mockClassRepo) GetWaitlist(scheduleID int64) ([]*models.WaitlistEntryWithUser, error) {
+	return nil, nil
+}
+func (m *mockClassRepo) PromoteFromWaitlist(tx *sql.Tx, scheduleID int64) (*models.WaitlistEntry, error) {
+	return nil, nil
+}
 
 type mockInstructorRepo struct {
 	assignToClassErr error

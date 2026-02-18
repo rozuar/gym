@@ -1,19 +1,5 @@
-import { HTMLAttributes, forwardRef } from 'react';
+import type { HTMLAttributes } from 'react'
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {}
-
-export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', children, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={`bg-zinc-800 border border-zinc-700 rounded-lg p-6 ${className}`}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-
-Card.displayName = 'Card';
+export function Card({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={`bg-card border border-border rounded-xl p-4 ${className}`} {...props} />
+}

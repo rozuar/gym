@@ -186,11 +186,22 @@ func (r *RoutineRepository) GetScheduleRoutine(scheduleID int64) (*models.Schedu
 // User Results
 
 func (r *RoutineRepository) LogResult(result *models.UserRoutineResult) error {
-	query := `INSERT INTO user_routine_results (user_id, routine_id, class_schedule_id, score, notes, rx)
-			  VALUES ($1, $2, $3, $4, $5, $6)
+	// Check if this is a PR (first result for this user+routine)
+	var count int
+	r.db.QueryRow("SELECT COUNT(*) FROM user_routine_results WHERE user_id = $1 AND routine_id = $2",
+		result.UserID, result.RoutineID).Scan(&count)
+	isPR := count == 0
+
+	query := `INSERT INTO user_routine_results (user_id, routine_id, class_schedule_id, score, notes, rx, is_pr)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7)
 			  RETURNING id, created_at`
-	return r.db.QueryRow(query, result.UserID, result.RoutineID, result.ClassScheduleID,
-		result.Score, result.Notes, result.Rx).Scan(&result.ID, &result.CreatedAt)
+	err := r.db.QueryRow(query, result.UserID, result.RoutineID, result.ClassScheduleID,
+		result.Score, result.Notes, result.Rx, isPR).Scan(&result.ID, &result.CreatedAt)
+	if err != nil {
+		return err
+	}
+	result.IsPR = isPR
+	return nil
 }
 
 func (r *RoutineRepository) GetUserResults(userID int64, limit int, offset ...int) ([]*models.UserResultWithDetails, error) {
@@ -198,8 +209,9 @@ func (r *RoutineRepository) GetUserResults(userID int64, limit int, offset ...in
 	if len(offset) > 0 {
 		off = offset[0]
 	}
-	query := `SELECT urr.id, urr.user_id, urr.routine_id, urr.class_schedule_id, urr.score, urr.notes, urr.rx, urr.created_at,
-			         rt.name, rt.type, cs.date
+	query := `SELECT urr.id, urr.user_id, urr.routine_id, urr.class_schedule_id, urr.score, urr.notes, urr.rx, COALESCE(urr.is_pr, false), urr.created_at,
+			         rt.name, rt.type, cs.date,
+			         (SELECT COUNT(*) FROM fistbumps fb WHERE fb.result_id = urr.id)
 			  FROM user_routine_results urr
 			  JOIN routines rt ON urr.routine_id = rt.id
 			  LEFT JOIN class_schedules cs ON urr.class_schedule_id = cs.id
@@ -217,8 +229,8 @@ func (r *RoutineRepository) GetUserResults(userID int64, limit int, offset ...in
 	for rows.Next() {
 		res := &models.UserResultWithDetails{}
 		if err := rows.Scan(
-			&res.ID, &res.UserID, &res.RoutineID, &res.ClassScheduleID, &res.Score, &res.Notes, &res.Rx, &res.CreatedAt,
-			&res.RoutineName, &res.RoutineType, &res.ScheduleDate,
+			&res.ID, &res.UserID, &res.RoutineID, &res.ClassScheduleID, &res.Score, &res.Notes, &res.Rx, &res.IsPR, &res.CreatedAt,
+			&res.RoutineName, &res.RoutineType, &res.ScheduleDate, &res.FistbumpCount,
 		); err != nil {
 			return nil, err
 		}
@@ -228,7 +240,7 @@ func (r *RoutineRepository) GetUserResults(userID int64, limit int, offset ...in
 }
 
 func (r *RoutineRepository) GetRoutineHistory(routineID int64, userID int64) ([]*models.UserRoutineResult, error) {
-	query := `SELECT id, user_id, routine_id, class_schedule_id, score, notes, rx, created_at
+	query := `SELECT id, user_id, routine_id, class_schedule_id, score, notes, rx, COALESCE(is_pr, false), created_at
 			  FROM user_routine_results
 			  WHERE routine_id = $1 AND user_id = $2
 			  ORDER BY created_at DESC`
@@ -243,7 +255,7 @@ func (r *RoutineRepository) GetRoutineHistory(routineID int64, userID int64) ([]
 	for rows.Next() {
 		res := &models.UserRoutineResult{}
 		if err := rows.Scan(&res.ID, &res.UserID, &res.RoutineID, &res.ClassScheduleID,
-			&res.Score, &res.Notes, &res.Rx, &res.CreatedAt); err != nil {
+			&res.Score, &res.Notes, &res.Rx, &res.IsPR, &res.CreatedAt); err != nil {
 			return nil, err
 		}
 		results = append(results, res)
@@ -253,13 +265,13 @@ func (r *RoutineRepository) GetRoutineHistory(routineID int64, userID int64) ([]
 
 func (r *RoutineRepository) GetResultByID(resultID int64) (*models.UserRoutineResult, error) {
 	result := &models.UserRoutineResult{}
-	query := `SELECT id, user_id, routine_id, class_schedule_id, score, notes, rx, created_at
+	query := `SELECT id, user_id, routine_id, class_schedule_id, score, notes, rx, COALESCE(is_pr, false), created_at
 			  FROM user_routine_results
 			  WHERE id = $1`
 
 	err := r.db.QueryRow(query, resultID).Scan(
 		&result.ID, &result.UserID, &result.RoutineID, &result.ClassScheduleID,
-		&result.Score, &result.Notes, &result.Rx, &result.CreatedAt,
+		&result.Score, &result.Notes, &result.Rx, &result.IsPR, &result.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -279,4 +291,58 @@ func (r *RoutineRepository) DeleteResult(resultID int64, userID int64) error {
 	query := `DELETE FROM user_routine_results WHERE id = $1 AND user_id = $2`
 	_, err := r.db.Exec(query, resultID, userID)
 	return err
+}
+
+func (r *RoutineRepository) GetUserPRs(userID int64) ([]*models.UserResultWithDetails, error) {
+	query := `SELECT urr.id, urr.user_id, urr.routine_id, urr.class_schedule_id, urr.score, urr.notes, urr.rx, COALESCE(urr.is_pr, false), urr.created_at,
+			         rt.name, rt.type, cs.date,
+			         (SELECT COUNT(*) FROM fistbumps fb WHERE fb.result_id = urr.id)
+			  FROM user_routine_results urr
+			  JOIN routines rt ON urr.routine_id = rt.id
+			  LEFT JOIN class_schedules cs ON urr.class_schedule_id = cs.id
+			  WHERE urr.user_id = $1 AND urr.is_pr = true
+			  ORDER BY urr.created_at DESC`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*models.UserResultWithDetails
+	for rows.Next() {
+		res := &models.UserResultWithDetails{}
+		if err := rows.Scan(
+			&res.ID, &res.UserID, &res.RoutineID, &res.ClassScheduleID, &res.Score, &res.Notes, &res.Rx, &res.IsPR, &res.CreatedAt,
+			&res.RoutineName, &res.RoutineType, &res.ScheduleDate, &res.FistbumpCount,
+		); err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+	return results, nil
+}
+
+func (r *RoutineRepository) GetLeaderboard(scheduleID int64) ([]*models.LeaderboardEntry, error) {
+	query := `SELECT urr.user_id, u.name, urr.score, urr.rx, COALESCE(urr.is_pr, false)
+			  FROM user_routine_results urr
+			  JOIN users u ON urr.user_id = u.id
+			  WHERE urr.class_schedule_id = $1
+			  ORDER BY urr.rx DESC, urr.score ASC`
+
+	rows, err := r.db.Query(query, scheduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []*models.LeaderboardEntry
+	for rows.Next() {
+		e := &models.LeaderboardEntry{}
+		if err := rows.Scan(&e.UserID, &e.UserName, &e.Score, &e.Rx, &e.IsPR); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, nil
 }
