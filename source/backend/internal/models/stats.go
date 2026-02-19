@@ -57,6 +57,14 @@ type ClassPopularity struct {
 	FillRate       float64 `json:"fill_rate"`
 }
 
+type RetentionAlert struct {
+	UserID      int64      `json:"user_id"`
+	UserName    string     `json:"user_name"`
+	UserEmail   string     `json:"user_email"`
+	LastBooking *time.Time `json:"last_booking,omitempty"`
+	DaysInactive int       `json:"days_inactive"`
+}
+
 type MonthlyReport struct {
 	Month           string             `json:"month"`
 	NewUsers        int64              `json:"new_users"`

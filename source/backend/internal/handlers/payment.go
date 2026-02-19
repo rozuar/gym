@@ -12,9 +12,10 @@ import (
 )
 
 type PaymentHandler struct {
-	paymentRepo repository.PaymentRepo
-	planRepo    repository.PlanRepo
-	userRepo    repository.UserRepo
+	paymentRepo  repository.PaymentRepo
+	planRepo     repository.PlanRepo
+	userRepo     repository.UserRepo
+	discountRepo *repository.DiscountCodeRepository
 }
 
 func NewPaymentHandler(paymentRepo repository.PaymentRepo, planRepo repository.PlanRepo, userRepo repository.UserRepo) *PaymentHandler {
@@ -23,6 +24,10 @@ func NewPaymentHandler(paymentRepo repository.PaymentRepo, planRepo repository.P
 		planRepo:    planRepo,
 		userRepo:    userRepo,
 	}
+}
+
+func (h *PaymentHandler) SetDiscountRepo(repo *repository.DiscountCodeRepository) {
+	h.discountRepo = repo
 }
 
 // Create - Solo admin registra pagos (efectivo, débito, transferencia). Transferencia requiere proof_image_url.
@@ -48,7 +53,8 @@ func (h *PaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.userRepo.GetByID(req.UserID); err != nil {
+	user, err := h.userRepo.GetByID(req.UserID)
+	if err != nil {
 		respondError(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -63,19 +69,50 @@ func (h *PaymentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Determine effective price: trial or regular
+	effectivePrice := plan.Price
+	if plan.TrialPrice > 0 && plan.TrialDays > 0 {
+		// Eligible if user registered within TrialDays and has no prior subscriptions
+		daysSinceReg := int(time.Since(user.CreatedAt).Hours() / 24)
+		if daysSinceReg <= plan.TrialDays {
+			existing, _ := h.paymentRepo.GetActiveSubscription(req.UserID)
+			if existing == nil {
+				effectivePrice = plan.TrialPrice
+			}
+		}
+	}
+
+	// Apply discount code if provided
+	var discountCodeID int64
+	if req.DiscountCode != "" && h.discountRepo != nil {
+		dc, dcErr := h.discountRepo.Validate(req.DiscountCode)
+		if dcErr != nil {
+			respondError(w, http.StatusBadRequest, "Invalid or expired discount code")
+			return
+		}
+		effectivePrice = dc.ApplyDiscount(effectivePrice)
+		discountCodeID = dc.ID
+	}
+
 	payment := &models.Payment{
 		UserID:        req.UserID,
 		PlanID:        plan.ID,
-		Amount:        plan.Price,
+		Amount:        effectivePrice,
 		Currency:      plan.Currency,
 		Status:        models.PaymentCompleted,
 		PaymentMethod: req.PaymentMethod,
 		ProofImageURL: req.ProofImageURL,
 	}
+	_ = discountCodeID
 
 	if err := h.paymentRepo.Create(payment); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to create payment")
 		return
+	}
+
+	// Increment discount code uses
+	if discountCodeID > 0 && h.discountRepo != nil {
+		_ = h.discountRepo.IncrementUses(discountCodeID)
 	}
 
 	startDate := time.Now()

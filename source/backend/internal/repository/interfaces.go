@@ -103,6 +103,23 @@ type RoutineRepo interface {
 	GetLeaderboard(scheduleID int64) ([]*models.LeaderboardEntry, error)
 }
 
+type DiscountCodeRepo interface {
+	Create(code *models.DiscountCode) error
+	GetByCode(code string) (*models.DiscountCode, error)
+	List(activeOnly bool) ([]*models.DiscountCode, error)
+	Delete(id int64) error
+	IncrementUses(id int64) error
+}
+
+type BadgeRepo interface {
+	AwardBadge(userID int64, badgeType string) error
+	GetUserBadges(userID int64) ([]*models.UserBadge, error)
+	HasBadge(userID int64, badgeType string) (bool, error)
+	CountCheckins(userID int64) (int, error)
+	CountPRs(userID int64) (int, error)
+	HasRxResult(userID int64) (bool, error)
+}
+
 type FeedRepo interface {
 	CreateEvent(event *models.FeedEvent) error
 	GetFeed(limit, offset int) ([]*models.FeedEventWithUser, error)
@@ -118,4 +135,5 @@ type StatsRepo interface {
 	GetUserActivity(status string, limit int) ([]*models.UserActivityStats, error)
 	GetClassPopularity(limit int) ([]*models.ClassPopularity, error)
 	GetMonthlyReport(month string) (*models.MonthlyReport, error)
+	GetRetentionAlerts(inactiveDays, limit int) ([]*models.RetentionAlert, error)
 }

@@ -39,6 +39,8 @@ func main() {
 	instructorRepo := repository.NewInstructorRepository(db)
 	feedRepo := repository.NewFeedRepository(db)
 	statsRepo := repository.NewStatsRepository(db)
+	discountRepo := repository.NewDiscountCodeRepository(db)
+	badgeRepo := repository.NewBadgeRepository(db)
 
 	authService := services.NewAuthService(userRepo, cfg)
 	emailService := services.NewEmailService(cfg)
@@ -53,14 +55,18 @@ func main() {
 	userHandler := handlers.NewUserHandler(userRepo)
 	planHandler := handlers.NewPlanHandler(planRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentRepo, planRepo, userRepo)
+	paymentHandler.SetDiscountRepo(discountRepo)
 	classHandler := handlers.NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, emailService)
 	classHandler.SetConfig(cfg)
 	routineHandler := handlers.NewRoutineHandler(routineRepo, feedRepo)
+	routineHandler.SetBadgeRepo(badgeRepo)
 	feedHandler := handlers.NewFeedHandler(feedRepo)
 	instructorHandler := handlers.NewInstructorHandler(instructorRepo)
 	statsHandler := handlers.NewStatsHandler(statsRepo)
 	uploadHandler := handlers.NewUploadHandler(cfg)
 	tvHandler := handlers.NewTVHandler(classRepo, routineRepo)
+	discountHandler := handlers.NewDiscountCodeHandler(discountRepo)
+	badgeHandler := handlers.NewBadgeHandler(badgeRepo)
 
 	// Public routes
 	mux.HandleFunc("GET /api/v1/config", configHandler.Get)
@@ -165,6 +171,15 @@ func main() {
 	mux.Handle("POST /api/v1/users/{id}/invitation", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(userHandler.AddInvitation))))
 	mux.Handle("DELETE /api/v1/users/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(userHandler.Delete))))
 
+	// Discount codes (admin CRUD + authenticated validate)
+	mux.Handle("GET /api/v1/discount-codes", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(discountHandler.List))))
+	mux.Handle("POST /api/v1/discount-codes", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(discountHandler.Create))))
+	mux.Handle("DELETE /api/v1/discount-codes/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(discountHandler.Delete))))
+	mux.Handle("GET /api/v1/discount-codes/validate", middleware.Auth(cfg)(http.HandlerFunc(discountHandler.Validate)))
+
+	// Badges
+	mux.Handle("GET /api/v1/badges/me", middleware.Auth(cfg)(http.HandlerFunc(badgeHandler.MyBadges)))
+
 	// Stats (admin only)
 	mux.Handle("GET /api/v1/stats/dashboard", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.Dashboard))))
 	mux.Handle("GET /api/v1/stats/attendance", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.Attendance))))
@@ -173,6 +188,7 @@ func main() {
 	mux.Handle("GET /api/v1/stats/users", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.Users))))
 	mux.Handle("GET /api/v1/stats/classes", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.Classes))))
 	mux.Handle("GET /api/v1/stats/report", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.MonthlyReport))))
+	mux.Handle("GET /api/v1/stats/retention", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.Retention))))
 
 	// Exports (admin only)
 	mux.Handle("GET /api/v1/export/users", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.ExportUsers))))

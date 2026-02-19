@@ -13,6 +13,7 @@ import (
 type RoutineHandler struct {
 	routineRepo repository.RoutineRepo
 	feedRepo    repository.FeedRepo
+	badgeRepo   *repository.BadgeRepository
 }
 
 func NewRoutineHandler(routineRepo repository.RoutineRepo, feedRepo ...repository.FeedRepo) *RoutineHandler {
@@ -21,6 +22,10 @@ func NewRoutineHandler(routineRepo repository.RoutineRepo, feedRepo ...repositor
 		h.feedRepo = feedRepo[0]
 	}
 	return h
+}
+
+func (h *RoutineHandler) SetBadgeRepo(repo *repository.BadgeRepository) {
+	h.badgeRepo = repo
 }
 
 func (h *RoutineHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -322,6 +327,11 @@ func (h *RoutineHandler) LogResult(w http.ResponseWriter, r *http.Request) {
 			RefID:     &result.ID,
 			DataJSON:  `{"routine_id":` + strconv.FormatInt(req.RoutineID, 10) + `,"score":"` + req.Score + `"}`,
 		})
+	}
+
+	// Auto-award badges
+	if h.badgeRepo != nil {
+		go CheckAndAward(h.badgeRepo, userID)
 	}
 
 	respondJSON(w, http.StatusCreated, result)

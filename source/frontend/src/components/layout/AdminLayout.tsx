@@ -8,6 +8,7 @@ const tabs = [
   { to: '/admin/routines', label: 'Rutinas' },
   { to: '/admin/plans', label: 'Planes' },
   { to: '/admin/payments', label: 'Pagos' },
+  { to: '/admin/discount-codes', label: 'Descuentos' },
   { to: '/admin/instructors', label: 'Instructores' },
 ]
 

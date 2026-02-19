@@ -30,6 +30,39 @@ export interface Plan {
   duration: number
   max_classes: number
   active: boolean
+  trial_price?: number
+  trial_days?: number
+}
+
+export interface DiscountCode {
+  id: number
+  code: string
+  description: string
+  discount_type: 'percent' | 'amount'
+  discount_value: number
+  max_uses: number
+  uses_count: number
+  valid_until?: string
+  active: boolean
+  created_at: string
+}
+
+export interface Badge {
+  id: number
+  user_id: number
+  badge_type: string
+  awarded_at: string
+  name: string
+  description: string
+  icon: string
+}
+
+export interface RetentionAlert {
+  user_id: number
+  user_name: string
+  user_email: string
+  last_booking?: string
+  days_inactive: number
 }
 
 export interface Subscription {

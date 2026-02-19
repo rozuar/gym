@@ -43,6 +43,8 @@ func (h *PlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Duration:    req.Duration,
 		MaxClasses:  req.MaxClasses,
 		Active:      true,
+		TrialPrice:  req.TrialPrice,
+		TrialDays:   req.TrialDays,
 	}
 
 	if err := h.planRepo.Create(plan); err != nil {
@@ -123,6 +125,12 @@ func (h *PlanHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Active != nil {
 		plan.Active = *req.Active
+	}
+	if req.TrialPrice != nil {
+		plan.TrialPrice = *req.TrialPrice
+	}
+	if req.TrialDays != nil {
+		plan.TrialDays = *req.TrialDays
 	}
 
 	if err := h.planRepo.Update(plan); err != nil {

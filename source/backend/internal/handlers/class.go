@@ -540,6 +540,7 @@ func (h *ClassHandler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Auto-award badges async (need userID from booking — skip for now, badge check on result log)
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Checked in"})
 }
 

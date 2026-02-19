@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { users, payments, uploadFile } from '../lib/api'
-import type { Subscription } from '../types'
+import { users, payments, uploadFile, badges as badgesApi } from '../lib/api'
+import type { Subscription, Badge } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Select } from '../components/ui/Input'
@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const { user, refreshUser } = useAuth()
   const [form, setForm] = useState({ name: '', phone: '', birth_date: '', sex: '', weight_kg: '', height_cm: '' })
   const [sub, setSub] = useState<Subscription | null>(null)
+  const [userBadges, setUserBadges] = useState<Badge[]>([])
   const [saving, setSaving] = useState(false)
   const [showFreeze, setShowFreeze] = useState(false)
   const [freezeUntil, setFreezeUntil] = useState('')
@@ -30,6 +31,7 @@ export default function ProfilePage() {
       height_cm: user.height_cm ? String(user.height_cm) : '',
     })
     loadSub()
+    badgesApi.mine().then(r => setUserBadges(r.badges || [])).catch(() => {})
   }, [user])
 
   const save = async () => {
@@ -128,6 +130,23 @@ export default function ProfilePage() {
                 Congelar membresía
               </Button>
             )}
+          </div>
+        </Card>
+      )}
+
+      {userBadges.length > 0 && (
+        <Card className="mb-4">
+          <h3 className="font-semibold mb-3">Logros</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {userBadges.map(b => (
+              <div key={b.id} className="flex items-center gap-2 bg-bg rounded-lg px-2 py-1.5">
+                <span className="text-xl">{b.icon}</span>
+                <div>
+                  <p className="text-xs font-medium">{b.name}</p>
+                  <p className="text-xs text-muted">{b.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}

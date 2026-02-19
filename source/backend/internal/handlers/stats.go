@@ -155,6 +155,31 @@ func (h *StatsHandler) MonthlyReport(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, report)
 }
 
+func (h *StatsHandler) Retention(w http.ResponseWriter, r *http.Request) {
+	days := 30
+	if d := r.URL.Query().Get("days"); d != "" {
+		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 {
+			days = parsed
+		}
+	}
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 200 {
+			limit = parsed
+		}
+	}
+
+	alerts, err := h.statsRepo.GetRetentionAlerts(days, limit)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch retention data")
+		return
+	}
+	if alerts == nil {
+		alerts = []*models.RetentionAlert{}
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{"alerts": alerts, "days": days})
+}
+
 func (h *StatsHandler) ExportUsers(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 

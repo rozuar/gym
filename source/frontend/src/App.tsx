@@ -24,6 +24,7 @@ import AdminSchedules from './pages/admin/Schedules'
 import AdminRoutines from './pages/admin/Routines'
 import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
+import AdminDiscountCodes from './pages/admin/DiscountCodes'
 import AdminInstructors from './pages/admin/Instructors'
 
 // Public
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="routines" element={<AdminRoutines />} />
         <Route path="plans" element={<AdminPlans />} />
         <Route path="payments" element={<AdminPayments />} />
+        <Route path="discount-codes" element={<AdminDiscountCodes />} />
         <Route path="instructors" element={<AdminInstructors />} />
       </Route>
 

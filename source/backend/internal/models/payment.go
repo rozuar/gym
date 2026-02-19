@@ -57,6 +57,7 @@ type CreatePaymentRequest struct {
 	PlanID        int64  `json:"plan_id"`
 	PaymentMethod string `json:"payment_method"`  // efectivo, debito, transferencia
 	ProofImageURL string `json:"proof_image_url"` // Opcional; obligatorio para transferencia
+	DiscountCode  string `json:"discount_code,omitempty"`
 }
 
 type PaymentWithDetails struct {

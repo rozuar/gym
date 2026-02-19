@@ -1,4 +1,4 @@
-import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule } from '../types'
+import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert } from '../types'
 
 const BASE = '/api/v1'
 
@@ -214,6 +214,19 @@ export const instructors = {
   remove: (id: number) => del(`/instructors/${id}`),
 }
 
+// Discount codes
+export const discountCodes = {
+  list: () => get<{ codes: DiscountCode[] }>('/discount-codes'),
+  create: (data: Partial<DiscountCode> & { valid_until?: string }) => post<DiscountCode>('/discount-codes', data),
+  remove: (id: number) => del(`/discount-codes/${id}`),
+  validate: (code: string) => get<{ code: string; discount_type: string; discount_value: number; description: string }>(`/discount-codes/validate?code=${encodeURIComponent(code)}`),
+}
+
+// Badges
+export const badges = {
+  mine: () => get<{ badges: Badge[] }>('/badges/me'),
+}
+
 // Stats
 export const stats = {
   dashboard: () => get<DashboardStats>('/stats/dashboard'),
@@ -222,6 +235,7 @@ export const stats = {
   plans: () => get('/stats/plans'),
   users: (status?: string, limit = 50) => get(`/stats/users?limit=${limit}${status ? `&status=${status}` : ''}`),
   classes: (limit = 20) => get(`/stats/classes?limit=${limit}`),
+  retention: (days = 30) => get<{ alerts: RetentionAlert[]; days: number }>(`/stats/retention?days=${days}`),
 }
 
 // TV

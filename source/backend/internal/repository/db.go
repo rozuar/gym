@@ -318,6 +318,35 @@ func Migrate(db *sql.DB) error {
 	-- Subscription freeze
 	ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS frozen BOOLEAN DEFAULT false;
 	ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS frozen_until TIMESTAMP;
+
+	-- Discount codes
+	CREATE TABLE IF NOT EXISTS discount_codes (
+		id SERIAL PRIMARY KEY,
+		code VARCHAR(50) UNIQUE NOT NULL,
+		description VARCHAR(255),
+		discount_type VARCHAR(20) NOT NULL DEFAULT 'percent',
+		discount_value INTEGER NOT NULL,
+		max_uses INTEGER DEFAULT 0,
+		uses_count INTEGER DEFAULT 0,
+		valid_until TIMESTAMP,
+		active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_discount_codes_code ON discount_codes(code);
+
+	-- User badges
+	CREATE TABLE IF NOT EXISTS user_badges (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		badge_type VARCHAR(50) NOT NULL,
+		awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(user_id, badge_type)
+	);
+	CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
+
+	-- Trial pricing on plans
+	ALTER TABLE plans ADD COLUMN IF NOT EXISTS trial_price BIGINT DEFAULT 0;
+	ALTER TABLE plans ADD COLUMN IF NOT EXISTS trial_days INTEGER DEFAULT 0;
 	`
 
 	_, err := db.Exec(query)

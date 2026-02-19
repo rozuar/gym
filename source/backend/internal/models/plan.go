@@ -13,6 +13,8 @@ type Plan struct {
 	Duration    int       `json:"duration"` // días
 	MaxClasses  int       `json:"max_classes,omitempty"` // 0 = ilimitado
 	Active      bool      `json:"active"`
+	TrialPrice  int64     `json:"trial_price,omitempty"` // 0 = sin oferta trial
+	TrialDays   int       `json:"trial_days,omitempty"`  // días desde registro elegibles
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -24,6 +26,8 @@ type CreatePlanRequest struct {
 	Currency    string `json:"currency"`
 	Duration    int    `json:"duration"`
 	MaxClasses  int    `json:"max_classes,omitempty"`
+	TrialPrice  int64  `json:"trial_price,omitempty"`
+	TrialDays   int    `json:"trial_days,omitempty"`
 }
 
 type UpdatePlanRequest struct {
@@ -33,4 +37,6 @@ type UpdatePlanRequest struct {
 	Duration    *int   `json:"duration,omitempty"`
 	MaxClasses  *int   `json:"max_classes,omitempty"`
 	Active      *bool  `json:"active,omitempty"`
+	TrialPrice  *int64 `json:"trial_price,omitempty"`
+	TrialDays   *int   `json:"trial_days,omitempty"`
 }

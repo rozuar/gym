@@ -218,6 +218,35 @@ func (r *StatsRepository) GetClassPopularity(limit int) ([]*models.ClassPopulari
 	return stats, nil
 }
 
+func (r *StatsRepository) GetRetentionAlerts(inactiveDays, limit int) ([]*models.RetentionAlert, error) {
+	query := `
+		SELECT u.id, u.name, u.email, MAX(b.created_at) as last_booking,
+		       COALESCE(EXTRACT(DAY FROM NOW() - MAX(b.created_at))::int, 9999) as days_inactive
+		FROM users u
+		LEFT JOIN bookings b ON u.id = b.user_id AND b.status IN ('booked', 'attended')
+		WHERE u.role = 'user' AND u.active = true
+		GROUP BY u.id, u.name, u.email
+		HAVING COALESCE(EXTRACT(DAY FROM NOW() - MAX(b.created_at))::int, 9999) >= $1
+		ORDER BY days_inactive DESC
+		LIMIT $2`
+
+	rows, err := r.db.Query(query, inactiveDays, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var alerts []*models.RetentionAlert
+	for rows.Next() {
+		a := &models.RetentionAlert{}
+		if err := rows.Scan(&a.UserID, &a.UserName, &a.UserEmail, &a.LastBooking, &a.DaysInactive); err != nil {
+			return nil, err
+		}
+		alerts = append(alerts, a)
+	}
+	return alerts, nil
+}
+
 func (r *StatsRepository) GetMonthlyReport(month string) (*models.MonthlyReport, error) {
 	report := &models.MonthlyReport{Month: month}
 
