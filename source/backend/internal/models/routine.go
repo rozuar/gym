@@ -5,21 +5,23 @@ import (
 )
 
 type Routine struct {
-	ID           int64     `json:"id"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description,omitempty"`
-	Type         string    `json:"type"` // wod, strength, skill, cardio
-	Content      string    `json:"content"`
-	Duration     int       `json:"duration,omitempty"`      // minutos
-	Difficulty   string    `json:"difficulty,omitempty"`    // beginner, intermediate, advanced, rx
-	InstructorID *int64    `json:"instructor_id,omitempty"` // Opcional
-	CreatedBy    int64     `json:"created_by"`
-	Active       bool      `json:"active"`
-	Billable     bool      `json:"billable"`
-	TargetUserID *int64    `json:"target_user_id,omitempty"`
-	IsCustom     bool      `json:"is_custom"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description,omitempty"`
+	Type            string    `json:"type"` // wod, strength, skill, cardio
+	Content         string    `json:"content"`
+	ContentScaled   string    `json:"content_scaled,omitempty"`
+	ContentBeginner string    `json:"content_beginner,omitempty"`
+	Duration        int       `json:"duration,omitempty"`      // minutos
+	Difficulty      string    `json:"difficulty,omitempty"`    // beginner, intermediate, advanced, rx
+	InstructorID    *int64    `json:"instructor_id,omitempty"` // Opcional
+	CreatedBy       int64     `json:"created_by"`
+	Active          bool      `json:"active"`
+	Billable        bool      `json:"billable"`
+	TargetUserID    *int64    `json:"target_user_id,omitempty"`
+	IsCustom        bool      `json:"is_custom"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type ScheduleRoutine struct {
@@ -45,30 +47,34 @@ type UserRoutineResult struct {
 // Requests
 
 type CreateRoutineRequest struct {
-	Name         string `json:"name"`
-	Description  string `json:"description,omitempty"`
-	Type         string `json:"type"`
-	Content      string `json:"content"`
-	Duration     int    `json:"duration,omitempty"`
-	Difficulty   string `json:"difficulty,omitempty"`
-	InstructorID *int64 `json:"instructor_id,omitempty"`
-	Billable     bool   `json:"billable"`
-	TargetUserID *int64 `json:"target_user_id,omitempty"`
-	IsCustom     bool   `json:"is_custom"`
+	Name            string `json:"name"`
+	Description     string `json:"description,omitempty"`
+	Type            string `json:"type"`
+	Content         string `json:"content"`
+	ContentScaled   string `json:"content_scaled,omitempty"`
+	ContentBeginner string `json:"content_beginner,omitempty"`
+	Duration        int    `json:"duration,omitempty"`
+	Difficulty      string `json:"difficulty,omitempty"`
+	InstructorID    *int64 `json:"instructor_id,omitempty"`
+	Billable        bool   `json:"billable"`
+	TargetUserID    *int64 `json:"target_user_id,omitempty"`
+	IsCustom        bool   `json:"is_custom"`
 }
 
 type UpdateRoutineRequest struct {
-	Name         string `json:"name,omitempty"`
-	Description  string `json:"description,omitempty"`
-	Type         string `json:"type,omitempty"`
-	Content      string `json:"content,omitempty"`
-	Duration     *int   `json:"duration,omitempty"`
-	Difficulty   string `json:"difficulty,omitempty"`
-	InstructorID *int64 `json:"instructor_id,omitempty"`
-	Active       *bool  `json:"active,omitempty"`
-	Billable     *bool  `json:"billable,omitempty"`
-	TargetUserID *int64 `json:"target_user_id,omitempty"`
-	IsCustom     *bool  `json:"is_custom,omitempty"`
+	Name            string  `json:"name,omitempty"`
+	Description     string  `json:"description,omitempty"`
+	Type            string  `json:"type,omitempty"`
+	Content         string  `json:"content,omitempty"`
+	ContentScaled   *string `json:"content_scaled,omitempty"`
+	ContentBeginner *string `json:"content_beginner,omitempty"`
+	Duration        *int    `json:"duration,omitempty"`
+	Difficulty      string  `json:"difficulty,omitempty"`
+	InstructorID    *int64  `json:"instructor_id,omitempty"`
+	Active          *bool   `json:"active,omitempty"`
+	Billable        *bool   `json:"billable,omitempty"`
+	TargetUserID    *int64  `json:"target_user_id,omitempty"`
+	IsCustom        *bool   `json:"is_custom,omitempty"`
 }
 
 type AssignRoutineRequest struct {
@@ -101,9 +107,11 @@ type RoutineWithCreator struct {
 
 type ScheduleRoutineWithDetails struct {
 	ScheduleRoutine
-	RoutineName    string `json:"routine_name"`
-	RoutineType    string `json:"routine_type"`
-	RoutineContent string `json:"routine_content"`
+	RoutineName            string `json:"routine_name"`
+	RoutineType            string `json:"routine_type"`
+	RoutineContent         string `json:"routine_content"`
+	RoutineContentScaled   string `json:"routine_content_scaled,omitempty"`
+	RoutineContentBeginner string `json:"routine_content_beginner,omitempty"`
 }
 
 type UserResultWithDetails struct {

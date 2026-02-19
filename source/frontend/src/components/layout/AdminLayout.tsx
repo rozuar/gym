@@ -9,6 +9,7 @@ const tabs = [
   { to: '/admin/plans', label: 'Planes' },
   { to: '/admin/payments', label: 'Pagos' },
   { to: '/admin/discount-codes', label: 'Descuentos' },
+  { to: '/admin/challenges', label: 'Challenges' },
   { to: '/admin/instructors', label: 'Instructores' },
 ]
 

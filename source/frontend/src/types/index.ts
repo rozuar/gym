@@ -151,6 +151,8 @@ export interface Routine {
   description: string
   type: string
   content: string
+  content_scaled?: string
+  content_beginner?: string
   duration: number
   difficulty: string
   instructor_id?: number
@@ -162,6 +164,31 @@ export interface Routine {
   creator_name: string
   instructor_name?: string
   target_user_name?: string
+}
+
+export interface Challenge {
+  id: number
+  name: string
+  description?: string
+  goal?: string
+  type: string
+  start_date?: string
+  end_date?: string
+  active: boolean
+  created_by: number
+  created_at: string
+  participant_count?: number
+}
+
+export interface ChallengeParticipant {
+  id: number
+  challenge_id: number
+  user_id: number
+  score?: string
+  notes?: string
+  completed_at?: string
+  created_at: string
+  user_name: string
 }
 
 export interface UserResult {
@@ -242,5 +269,7 @@ export interface TVSchedule extends Schedule {
   routine_name?: string
   routine_type?: string
   routine_content?: string
+  routine_content_scaled?: string
+  routine_content_beginner?: string
   leaderboard?: LeaderboardEntry[]
 }

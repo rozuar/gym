@@ -47,18 +47,20 @@ func (h *RoutineHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	routine := &models.Routine{
-		Name:         req.Name,
-		Description:  req.Description,
-		Type:         req.Type,
-		Content:      req.Content,
-		Duration:     req.Duration,
-		Difficulty:   req.Difficulty,
-		InstructorID: req.InstructorID,
-		CreatedBy:    userID,
-		Active:       true,
-		Billable:     req.Billable,
-		TargetUserID: req.TargetUserID,
-		IsCustom:     req.IsCustom,
+		Name:            req.Name,
+		Description:     req.Description,
+		Type:            req.Type,
+		Content:         req.Content,
+		ContentScaled:   req.ContentScaled,
+		ContentBeginner: req.ContentBeginner,
+		Duration:        req.Duration,
+		Difficulty:      req.Difficulty,
+		InstructorID:    req.InstructorID,
+		CreatedBy:       userID,
+		Active:          true,
+		Billable:        req.Billable,
+		TargetUserID:    req.TargetUserID,
+		IsCustom:        req.IsCustom,
 	}
 
 	if err := h.routineRepo.Create(routine); err != nil {
@@ -174,6 +176,12 @@ func (h *RoutineHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.IsCustom != nil {
 		routine.IsCustom = *req.IsCustom
+	}
+	if req.ContentScaled != nil {
+		routine.ContentScaled = *req.ContentScaled
+	}
+	if req.ContentBeginner != nil {
+		routine.ContentBeginner = *req.ContentBeginner
 	}
 
 	if err := h.routineRepo.Update(&routine.Routine); err != nil {

@@ -130,10 +130,12 @@ type WaitlistEntryWithUser struct {
 
 type TVSchedule struct {
 	ScheduleWithDetails
-	RoutineName    string             `json:"routine_name,omitempty"`
-	RoutineType    string             `json:"routine_type,omitempty"`
-	RoutineContent string             `json:"routine_content,omitempty"`
-	Leaderboard    []*LeaderboardEntry `json:"leaderboard,omitempty"`
+	RoutineName            string              `json:"routine_name,omitempty"`
+	RoutineType            string              `json:"routine_type,omitempty"`
+	RoutineContent         string              `json:"routine_content,omitempty"`
+	RoutineContentScaled   string              `json:"routine_content_scaled,omitempty"`
+	RoutineContentBeginner string              `json:"routine_content_beginner,omitempty"`
+	Leaderboard            []*LeaderboardEntry `json:"leaderboard,omitempty"`
 }
 
 type TVResponse struct {

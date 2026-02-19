@@ -347,6 +347,38 @@ func Migrate(db *sql.DB) error {
 	-- Trial pricing on plans
 	ALTER TABLE plans ADD COLUMN IF NOT EXISTS trial_price BIGINT DEFAULT 0;
 	ALTER TABLE plans ADD COLUMN IF NOT EXISTS trial_days INTEGER DEFAULT 0;
+
+	-- Scaling options on routines (2.5)
+	ALTER TABLE routines ADD COLUMN IF NOT EXISTS content_scaled TEXT;
+	ALTER TABLE routines ADD COLUMN IF NOT EXISTS content_beginner TEXT;
+
+	-- Challenges / retos (8.4)
+	CREATE TABLE IF NOT EXISTS challenges (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		description TEXT,
+		goal TEXT,
+		type VARCHAR(50) DEFAULT 'custom',
+		start_date DATE,
+		end_date DATE,
+		active BOOLEAN DEFAULT true,
+		created_by INTEGER REFERENCES users(id),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(active);
+
+	CREATE TABLE IF NOT EXISTS challenge_participants (
+		id SERIAL PRIMARY KEY,
+		challenge_id INTEGER REFERENCES challenges(id) ON DELETE CASCADE,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		score VARCHAR(100),
+		notes TEXT,
+		completed_at TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(challenge_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_challenge_participants_challenge ON challenge_participants(challenge_id);
+	CREATE INDEX IF NOT EXISTS idx_challenge_participants_user ON challenge_participants(user_id);
 	`
 
 	_, err := db.Exec(query)

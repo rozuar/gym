@@ -1,4 +1,4 @@
-import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert } from '../types'
+import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert, Challenge, ChallengeParticipant } from '../types'
 
 const BASE = '/api/v1'
 
@@ -236,6 +236,19 @@ export const stats = {
   users: (status?: string, limit = 50) => get(`/stats/users?limit=${limit}${status ? `&status=${status}` : ''}`),
   classes: (limit = 20) => get(`/stats/classes?limit=${limit}`),
   retention: (days = 30) => get<{ alerts: RetentionAlert[]; days: number }>(`/stats/retention?days=${days}`),
+}
+
+// Challenges
+export const challenges = {
+  list: (activeOnly = true) => get<{ challenges: Challenge[] }>(`/challenges?active=${activeOnly}`),
+  mine: () => get<{ challenges: Challenge[] }>('/challenges/mine'),
+  getById: (id: number) => get<{ challenge: Challenge; participants: ChallengeParticipant[]; is_participant: boolean }>(`/challenges/${id}`),
+  create: (data: Partial<Challenge> & { start_date?: string; end_date?: string }) => post<Challenge>('/challenges', data),
+  update: (id: number, data: Partial<Challenge> & { start_date?: string; end_date?: string }) => put<Challenge>(`/challenges/${id}`, data),
+  remove: (id: number) => del(`/challenges/${id}`),
+  join: (id: number) => post(`/challenges/${id}/join`),
+  leave: (id: number) => del(`/challenges/${id}/join`),
+  submitProgress: (id: number, score: string, notes?: string) => post(`/challenges/${id}/progress`, { score, notes }),
 }
 
 // TV

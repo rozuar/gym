@@ -26,6 +26,8 @@ import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
 import AdminDiscountCodes from './pages/admin/DiscountCodes'
 import AdminInstructors from './pages/admin/Instructors'
+import AdminChallenges from './pages/admin/Challenges'
+import Challenges from './pages/Challenges'
 
 // Public
 import TVDisplay from './pages/TVDisplay'
@@ -54,6 +56,7 @@ export default function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/leaderboard/:scheduleId?" element={<Leaderboard />} />
+        <Route path="/challenges" element={<Challenges />} />
       </Route>
 
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
@@ -65,6 +68,7 @@ export default function App() {
         <Route path="plans" element={<AdminPlans />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="discount-codes" element={<AdminDiscountCodes />} />
+        <Route path="challenges" element={<AdminChallenges />} />
         <Route path="instructors" element={<AdminInstructors />} />
       </Route>
 

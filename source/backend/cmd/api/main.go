@@ -41,6 +41,7 @@ func main() {
 	statsRepo := repository.NewStatsRepository(db)
 	discountRepo := repository.NewDiscountCodeRepository(db)
 	badgeRepo := repository.NewBadgeRepository(db)
+	challengeRepo := repository.NewChallengeRepository(db)
 
 	authService := services.NewAuthService(userRepo, cfg)
 	emailService := services.NewEmailService(cfg)
@@ -67,6 +68,7 @@ func main() {
 	tvHandler := handlers.NewTVHandler(classRepo, routineRepo)
 	discountHandler := handlers.NewDiscountCodeHandler(discountRepo)
 	badgeHandler := handlers.NewBadgeHandler(badgeRepo)
+	challengeHandler := handlers.NewChallengeHandler(challengeRepo)
 
 	// Public routes
 	mux.HandleFunc("GET /api/v1/config", configHandler.Get)
@@ -179,6 +181,17 @@ func main() {
 
 	// Badges
 	mux.Handle("GET /api/v1/badges/me", middleware.Auth(cfg)(http.HandlerFunc(badgeHandler.MyBadges)))
+
+	// Challenges (public list, authenticated join/submit, admin create/update/delete)
+	mux.Handle("GET /api/v1/challenges", middleware.Auth(cfg)(http.HandlerFunc(challengeHandler.List)))
+	mux.Handle("GET /api/v1/challenges/mine", middleware.Auth(cfg)(http.HandlerFunc(challengeHandler.MyChallenges)))
+	mux.Handle("GET /api/v1/challenges/{id}", middleware.Auth(cfg)(http.HandlerFunc(challengeHandler.GetByID)))
+	mux.Handle("POST /api/v1/challenges", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(challengeHandler.Create))))
+	mux.Handle("PUT /api/v1/challenges/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(challengeHandler.Update))))
+	mux.Handle("DELETE /api/v1/challenges/{id}", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(challengeHandler.Delete))))
+	mux.Handle("POST /api/v1/challenges/{id}/join", middleware.Auth(cfg)(http.HandlerFunc(challengeHandler.Join)))
+	mux.Handle("DELETE /api/v1/challenges/{id}/join", middleware.Auth(cfg)(http.HandlerFunc(challengeHandler.Leave)))
+	mux.Handle("POST /api/v1/challenges/{id}/progress", middleware.Auth(cfg)(http.HandlerFunc(challengeHandler.SubmitProgress)))
 
 	// Stats (admin only)
 	mux.Handle("GET /api/v1/stats/dashboard", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(statsHandler.Dashboard))))

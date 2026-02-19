@@ -17,18 +17,20 @@ func NewRoutineRepository(db *sql.DB) *RoutineRepository {
 }
 
 func (r *RoutineRepository) Create(routine *models.Routine) error {
-	query := `INSERT INTO routines (name, description, type, content, duration, difficulty, instructor_id, created_by, active, billable, target_user_id, is_custom)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10, $11)
+	query := `INSERT INTO routines (name, description, type, content, content_scaled, content_beginner, duration, difficulty, instructor_id, created_by, active, billable, target_user_id, is_custom)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11, $12, $13)
 			  RETURNING id, created_at, updated_at`
 	return r.db.QueryRow(query, routine.Name, routine.Description, routine.Type,
-		routine.Content, routine.Duration, routine.Difficulty, routine.InstructorID, routine.CreatedBy,
+		routine.Content, routine.ContentScaled, routine.ContentBeginner,
+		routine.Duration, routine.Difficulty, routine.InstructorID, routine.CreatedBy,
 		routine.Billable, routine.TargetUserID, routine.IsCustom).
 		Scan(&routine.ID, &routine.CreatedAt, &routine.UpdatedAt)
 }
 
 func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error) {
 	routine := &models.RoutineWithCreator{}
-	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
+	query := `SELECT r.id, r.name, r.description, r.type, r.content, COALESCE(r.content_scaled,''), COALESCE(r.content_beginner,''),
+			         r.duration, r.difficulty,
 			         r.instructor_id, r.created_by, r.active, r.billable, r.target_user_id, r.is_custom,
 			         r.created_at, r.updated_at, u.name, i.name, tu.name
 			  FROM routines r
@@ -39,6 +41,7 @@ func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error
 
 	err := r.db.QueryRow(query, id).Scan(
 		&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
+		&routine.ContentScaled, &routine.ContentBeginner,
 		&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
 		&routine.Billable, &routine.TargetUserID, &routine.IsCustom,
 		&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName, &routine.TargetUserName,
@@ -50,7 +53,8 @@ func (r *RoutineRepository) GetByID(id int64) (*models.RoutineWithCreator, error
 }
 
 func (r *RoutineRepository) List(routineType string, custom *bool, limit, offset int) ([]*models.RoutineWithCreator, error) {
-	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
+	query := `SELECT r.id, r.name, r.description, r.type, r.content, COALESCE(r.content_scaled,''), COALESCE(r.content_beginner,''),
+			         r.duration, r.difficulty,
 			         r.instructor_id, r.created_by, r.active, r.billable, r.target_user_id, r.is_custom,
 			         r.created_at, r.updated_at, u.name, i.name, tu.name
 			  FROM routines r
@@ -86,6 +90,7 @@ func (r *RoutineRepository) List(routineType string, custom *bool, limit, offset
 		routine := &models.RoutineWithCreator{}
 		if err := rows.Scan(
 			&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
+			&routine.ContentScaled, &routine.ContentBeginner,
 			&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
 			&routine.Billable, &routine.TargetUserID, &routine.IsCustom,
 			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName, &routine.TargetUserName,
@@ -98,9 +103,10 @@ func (r *RoutineRepository) List(routineType string, custom *bool, limit, offset
 }
 
 func (r *RoutineRepository) Update(routine *models.Routine) error {
-	query := `UPDATE routines SET name=$1, description=$2, type=$3, content=$4, duration=$5, difficulty=$6, instructor_id=$7, active=$8, billable=$9, target_user_id=$10, is_custom=$11, updated_at=$12 WHERE id=$13`
+	query := `UPDATE routines SET name=$1, description=$2, type=$3, content=$4, content_scaled=$5, content_beginner=$6, duration=$7, difficulty=$8, instructor_id=$9, active=$10, billable=$11, target_user_id=$12, is_custom=$13, updated_at=$14 WHERE id=$15`
 	routine.UpdatedAt = time.Now()
 	_, err := r.db.Exec(query, routine.Name, routine.Description, routine.Type, routine.Content,
+		routine.ContentScaled, routine.ContentBeginner,
 		routine.Duration, routine.Difficulty, routine.InstructorID, routine.Active,
 		routine.Billable, routine.TargetUserID, routine.IsCustom, routine.UpdatedAt, routine.ID)
 	return err
@@ -112,7 +118,8 @@ func (r *RoutineRepository) Delete(id int64) error {
 }
 
 func (r *RoutineRepository) ListCustom(targetUserID *int64) ([]*models.RoutineWithCreator, error) {
-	query := `SELECT r.id, r.name, r.description, r.type, r.content, r.duration, r.difficulty,
+	query := `SELECT r.id, r.name, r.description, r.type, r.content, COALESCE(r.content_scaled,''), COALESCE(r.content_beginner,''),
+			         r.duration, r.difficulty,
 			         r.instructor_id, r.created_by, r.active, r.billable, r.target_user_id, r.is_custom,
 			         r.created_at, r.updated_at, u.name, i.name, tu.name
 			  FROM routines r
@@ -139,6 +146,7 @@ func (r *RoutineRepository) ListCustom(targetUserID *int64) ([]*models.RoutineWi
 		routine := &models.RoutineWithCreator{}
 		if err := rows.Scan(
 			&routine.ID, &routine.Name, &routine.Description, &routine.Type, &routine.Content,
+			&routine.ContentScaled, &routine.ContentBeginner,
 			&routine.Duration, &routine.Difficulty, &routine.InstructorID, &routine.CreatedBy, &routine.Active,
 			&routine.Billable, &routine.TargetUserID, &routine.IsCustom,
 			&routine.CreatedAt, &routine.UpdatedAt, &routine.CreatorName, &routine.InstructorName, &routine.TargetUserName,
@@ -168,7 +176,7 @@ func (r *RoutineRepository) AssignToSchedule(sr *models.ScheduleRoutine) error {
 func (r *RoutineRepository) GetScheduleRoutine(scheduleID int64) (*models.ScheduleRoutineWithDetails, error) {
 	sr := &models.ScheduleRoutineWithDetails{}
 	query := `SELECT sr.id, sr.class_schedule_id, sr.routine_id, sr.notes, sr.created_at,
-			         rt.name, rt.type, rt.content
+			         rt.name, rt.type, rt.content, COALESCE(rt.content_scaled,''), COALESCE(rt.content_beginner,'')
 			  FROM schedule_routines sr
 			  JOIN routines rt ON sr.routine_id = rt.id
 			  WHERE sr.class_schedule_id = $1`
@@ -176,6 +184,7 @@ func (r *RoutineRepository) GetScheduleRoutine(scheduleID int64) (*models.Schedu
 	err := r.db.QueryRow(query, scheduleID).Scan(
 		&sr.ID, &sr.ClassScheduleID, &sr.RoutineID, &sr.Notes, &sr.CreatedAt,
 		&sr.RoutineName, &sr.RoutineType, &sr.RoutineContent,
+		&sr.RoutineContentScaled, &sr.RoutineContentBeginner,
 	)
 	if err != nil {
 		return nil, err

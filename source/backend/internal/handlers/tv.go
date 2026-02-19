@@ -39,6 +39,8 @@ func (h *TVHandler) GetToday(w http.ResponseWriter, r *http.Request) {
 			tv.RoutineName = sr.RoutineName
 			tv.RoutineType = sr.RoutineType
 			tv.RoutineContent = sr.RoutineContent
+			tv.RoutineContentScaled = sr.RoutineContentScaled
+			tv.RoutineContentBeginner = sr.RoutineContentBeginner
 		}
 
 		// Get top 5 leaderboard
