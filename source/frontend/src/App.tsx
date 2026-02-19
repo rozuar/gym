@@ -15,6 +15,7 @@ import PRs from './pages/PRs'
 import Profile from './pages/Profile'
 import Plans from './pages/Plans'
 import Leaderboard from './pages/Leaderboard'
+import BodyTracking from './pages/BodyTracking'
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard'
@@ -27,6 +28,8 @@ import AdminPayments from './pages/admin/Payments'
 import AdminDiscountCodes from './pages/admin/DiscountCodes'
 import AdminInstructors from './pages/admin/Instructors'
 import AdminChallenges from './pages/admin/Challenges'
+import AdminLeads from './pages/admin/Leads'
+import AdminOnramp from './pages/admin/Onramp'
 import Challenges from './pages/Challenges'
 
 // Public
@@ -57,6 +60,7 @@ export default function App() {
         <Route path="/plans" element={<Plans />} />
         <Route path="/leaderboard/:scheduleId?" element={<Leaderboard />} />
         <Route path="/challenges" element={<Challenges />} />
+        <Route path="/body-tracking" element={<BodyTracking />} />
       </Route>
 
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
@@ -69,6 +73,8 @@ export default function App() {
         <Route path="payments" element={<AdminPayments />} />
         <Route path="discount-codes" element={<AdminDiscountCodes />} />
         <Route path="challenges" element={<AdminChallenges />} />
+        <Route path="leads" element={<AdminLeads />} />
+        <Route path="onramp" element={<AdminOnramp />} />
         <Route path="instructors" element={<AdminInstructors />} />
       </Route>
 

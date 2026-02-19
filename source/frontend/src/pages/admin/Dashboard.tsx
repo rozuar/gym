@@ -26,7 +26,10 @@ export default function AdminDashboard() {
     { label: 'Nuevos este mes', value: data.new_users_month },
     { label: 'Revenue total', value: fmtCLP(data.total_revenue) },
     { label: 'Revenue mes', value: fmtCLP(data.revenue_month) },
+    { label: 'MRR', value: fmtCLP(data.mrr), highlight: true },
     { label: 'Suscripciones activas', value: data.active_subs },
+    { label: 'Churn rate', value: `${data.churn_rate?.toFixed(1) ?? 0}%` },
+    { label: 'Nuevos leads', value: data.new_leads ?? 0 },
     { label: 'Clases hoy', value: data.classes_today },
     { label: 'Reservas hoy', value: data.bookings_today },
     { label: 'Asistencia hoy', value: data.attendance_today },
@@ -39,7 +42,7 @@ export default function AdminDashboard() {
         {cards.map(c => (
           <Card key={c.label}>
             <p className="text-sm text-muted">{c.label}</p>
-            <p className="text-2xl font-bold">{c.value}</p>
+            <p className={`text-2xl font-bold ${(c as any).highlight ? 'text-accent' : ''}`}>{c.value}</p>
           </Card>
         ))}
       </div>

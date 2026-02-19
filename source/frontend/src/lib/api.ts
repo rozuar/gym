@@ -1,4 +1,4 @@
-import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert, Challenge, ChallengeParticipant } from '../types'
+import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert, Challenge, ChallengeParticipant, Lead, BodyMeasurement, ResultComment, OnrampProgram, OnrampEnrollment } from '../types'
 
 const BASE = '/api/v1'
 
@@ -249,6 +249,40 @@ export const challenges = {
   join: (id: number) => post(`/challenges/${id}/join`),
   leave: (id: number) => del(`/challenges/${id}/join`),
   submitProgress: (id: number, score: string, notes?: string) => post(`/challenges/${id}/progress`, { score, notes }),
+}
+
+// Leads
+export const leads = {
+  list: (status?: string) => get<{ leads: Lead[]; counts: Record<string, number> }>(`/leads${status ? `?status=${status}` : ''}`),
+  create: (data: Partial<Lead>) => post<Lead>('/leads', data),
+  update: (id: number, data: Partial<Lead>) => put<Lead>(`/leads/${id}`, data),
+  remove: (id: number) => del(`/leads/${id}`),
+}
+
+// Body tracking
+export const bodyTracking = {
+  list: (limit?: number) => get<{ measurements: BodyMeasurement[] }>(`/body-tracking${limit ? `?limit=${limit}` : ''}`),
+  create: (data: Partial<BodyMeasurement> & { measured_at?: string }) => post<BodyMeasurement>('/body-tracking', data),
+  remove: (id: number) => del(`/body-tracking/${id}`),
+}
+
+// Comments
+export const comments = {
+  list: (resultId: number) => get<{ comments: ResultComment[] }>(`/results/${resultId}/comments`),
+  create: (resultId: number, content: string) => post<ResultComment>(`/results/${resultId}/comments`, { content }),
+  remove: (resultId: number, commentId: number) => del(`/results/${resultId}/comments/${commentId}`),
+}
+
+// On-ramp
+export const onramp = {
+  listPrograms: (activeOnly = true) => get<{ programs: OnrampProgram[] }>(`/onramp/programs?active=${activeOnly}`),
+  createProgram: (data: Partial<OnrampProgram>) => post<OnrampProgram>('/onramp/programs', data),
+  updateProgram: (id: number, data: Partial<OnrampProgram>) => put<OnrampProgram>(`/onramp/programs/${id}`, data),
+  deleteProgram: (id: number) => del(`/onramp/programs/${id}`),
+  enroll: (userId: number, programId: number) => post('/onramp/enroll', { user_id: userId, program_id: programId }),
+  updateSessions: (userId: number, programId: number, sessions: number) => put(`/onramp/users/${userId}/programs/${programId}/sessions`, { sessions }),
+  listEnrollments: (programId: number) => get<{ enrollments: OnrampEnrollment[] }>(`/onramp/programs/${programId}/enrollments`),
+  myEnrollments: () => get<{ enrollments: OnrampEnrollment[] }>('/onramp/me'),
 }
 
 // TV

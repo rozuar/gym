@@ -151,10 +151,11 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 mb-2">
         <Link to="/prs" className="flex-1"><Button variant="secondary" className="w-full">Mis PRs</Button></Link>
         <Link to="/plans" className="flex-1"><Button variant="secondary" className="w-full">Planes</Button></Link>
       </div>
+      <Link to="/body-tracking"><Button variant="secondary" className="w-full">📏 Body Tracking</Button></Link>
 
       <Modal open={showFreeze} onClose={() => setShowFreeze(false)} title="Congelar membresía">
         <div className="space-y-3">

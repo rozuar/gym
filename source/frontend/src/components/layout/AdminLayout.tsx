@@ -10,6 +10,8 @@ const tabs = [
   { to: '/admin/payments', label: 'Pagos' },
   { to: '/admin/discount-codes', label: 'Descuentos' },
   { to: '/admin/challenges', label: 'Challenges' },
+  { to: '/admin/leads', label: 'Leads' },
+  { to: '/admin/onramp', label: 'On-ramp' },
   { to: '/admin/instructors', label: 'Instructores' },
 ]
 
