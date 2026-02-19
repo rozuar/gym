@@ -40,6 +40,8 @@ type PaymentRepo interface {
 	IncrementClassesUsed(subscriptionID int64) error
 	DecrementClassesUsed(subscriptionID int64) error
 	DeactivateExpiredSubscriptions() error
+	FreezeSubscription(userID int64, frozenUntil time.Time) error
+	UnfreezeSubscription(userID int64) error
 }
 
 type InstructorRepo interface {

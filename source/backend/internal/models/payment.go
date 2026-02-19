@@ -38,16 +38,18 @@ type Payment struct {
 }
 
 type Subscription struct {
-	ID             int64     `json:"id"`
-	UserID         int64     `json:"user_id"`
-	PlanID         int64     `json:"plan_id"`
-	PaymentID      int64     `json:"payment_id"`
-	StartDate      time.Time `json:"start_date"`
-	EndDate        time.Time `json:"end_date"`
-	ClassesUsed    int       `json:"classes_used"`
-	ClassesAllowed int       `json:"classes_allowed"`
-	Active         bool      `json:"active"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID             int64      `json:"id"`
+	UserID         int64      `json:"user_id"`
+	PlanID         int64      `json:"plan_id"`
+	PaymentID      int64      `json:"payment_id"`
+	StartDate      time.Time  `json:"start_date"`
+	EndDate        time.Time  `json:"end_date"`
+	ClassesUsed    int        `json:"classes_used"`
+	ClassesAllowed int        `json:"classes_allowed"`
+	Active         bool       `json:"active"`
+	Frozen         bool       `json:"frozen"`
+	FrozenUntil    *time.Time `json:"frozen_until,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type CreatePaymentRequest struct {
@@ -68,4 +70,8 @@ type SubscriptionWithPlan struct {
 	Subscription
 	PlanName  string `json:"plan_name"`
 	PlanPrice int64  `json:"plan_price"`
+}
+
+type FreezeRequest struct {
+	FreezeUntil string `json:"freeze_until"` // "YYYY-MM-DD"
 }

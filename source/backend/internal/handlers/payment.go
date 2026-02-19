@@ -154,6 +154,56 @@ func (h *PaymentHandler) MySubscription(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+func (h *PaymentHandler) FreezeSubscription(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
+	var req models.FreezeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	frozenUntil, err := time.Parse("2006-01-02", req.FreezeUntil)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "freeze_until must be YYYY-MM-DD")
+		return
+	}
+
+	if !frozenUntil.After(time.Now()) {
+		respondError(w, http.StatusBadRequest, "freeze_until must be a future date")
+		return
+	}
+
+	maxFreeze := time.Now().AddDate(0, 3, 0)
+	if frozenUntil.After(maxFreeze) {
+		respondError(w, http.StatusBadRequest, "Maximum freeze period is 3 months")
+		return
+	}
+
+	if err := h.paymentRepo.FreezeSubscription(userID, frozenUntil); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to freeze subscription")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"message":      "Subscription frozen",
+		"frozen_until": req.FreezeUntil,
+	})
+}
+
+func (h *PaymentHandler) UnfreezeSubscription(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
+	if err := h.paymentRepo.UnfreezeSubscription(userID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to unfreeze subscription")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Subscription unfrozen",
+	})
+}
+
 func (h *PaymentHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	limit := 50
 	offset := 0

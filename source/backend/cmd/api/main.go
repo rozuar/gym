@@ -81,6 +81,8 @@ func main() {
 	mux.Handle("POST /api/v1/payments", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(paymentHandler.Create))))
 	mux.Handle("GET /api/v1/payments/me", middleware.Auth(cfg)(http.HandlerFunc(paymentHandler.MyPayments)))
 	mux.Handle("GET /api/v1/subscriptions/me", middleware.Auth(cfg)(http.HandlerFunc(paymentHandler.MySubscription)))
+	mux.Handle("POST /api/v1/subscriptions/me/freeze", middleware.Auth(cfg)(http.HandlerFunc(paymentHandler.FreezeSubscription)))
+	mux.Handle("POST /api/v1/subscriptions/me/unfreeze", middleware.Auth(cfg)(http.HandlerFunc(paymentHandler.UnfreezeSubscription)))
 	mux.Handle("GET /api/v1/payments", middleware.Auth(cfg)(middleware.AdminOnly(http.HandlerFunc(paymentHandler.ListAll))))
 
 	// Instructors (admin only)

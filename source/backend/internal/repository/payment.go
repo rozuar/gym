@@ -155,8 +155,9 @@ func (r *PaymentRepository) GetActiveSubscription(userID int64) (*models.Subscri
 	// Incluye periodo de gracia: bloqueo desde día 6. end_date + 5 días >= hoy => puede reservar
 	query := `
 		SELECT s.id, s.user_id, s.plan_id, s.payment_id, s.start_date, s.end_date,
-			   s.classes_used, s.classes_allowed, s.active, s.created_at,
-			   p.name, p.price
+			   s.classes_used, s.classes_allowed, s.active,
+			   COALESCE(s.frozen, false), s.frozen_until,
+			   s.created_at, p.name, p.price
 		FROM subscriptions s
 		JOIN plans p ON s.plan_id = p.id
 		WHERE s.user_id = $1 AND s.active = true
@@ -166,13 +167,43 @@ func (r *PaymentRepository) GetActiveSubscription(userID int64) (*models.Subscri
 
 	err := r.db.QueryRow(query, userID).Scan(
 		&sub.ID, &sub.UserID, &sub.PlanID, &sub.PaymentID, &sub.StartDate, &sub.EndDate,
-		&sub.ClassesUsed, &sub.ClassesAllowed, &sub.Active, &sub.CreatedAt,
-		&sub.PlanName, &sub.PlanPrice,
+		&sub.ClassesUsed, &sub.ClassesAllowed, &sub.Active,
+		&sub.Frozen, &sub.FrozenUntil,
+		&sub.CreatedAt, &sub.PlanName, &sub.PlanPrice,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return sub, nil
+}
+
+func (r *PaymentRepository) FreezeSubscription(userID int64, frozenUntil time.Time) error {
+	// Extend end_date by freeze duration and mark as frozen
+	query := `
+		UPDATE subscriptions
+		SET frozen = true,
+		    frozen_until = $2,
+		    end_date = end_date + ($2::date - CURRENT_DATE) * INTERVAL '1 day'
+		WHERE user_id = $1 AND active = true
+		  AND end_date >= CURRENT_DATE - INTERVAL '5 days'`
+	_, err := r.db.Exec(query, userID, frozenUntil)
+	return err
+}
+
+func (r *PaymentRepository) UnfreezeSubscription(userID int64) error {
+	// Remove remaining freeze days from end_date and unfreeze
+	query := `
+		UPDATE subscriptions
+		SET frozen = false,
+		    end_date = CASE
+		        WHEN frozen_until > CURRENT_DATE
+		        THEN end_date - (frozen_until::date - CURRENT_DATE) * INTERVAL '1 day'
+		        ELSE end_date
+		    END,
+		    frozen_until = NULL
+		WHERE user_id = $1 AND active = true AND frozen = true`
+	_, err := r.db.Exec(query, userID)
+	return err
 }
 
 func (r *PaymentRepository) IncrementClassesUsed(subscriptionID int64) error {

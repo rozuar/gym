@@ -41,6 +41,8 @@ export interface Subscription {
   classes_used: number
   classes_allowed: number
   active: boolean
+  frozen: boolean
+  frozen_until?: string
 }
 
 export interface Discipline {

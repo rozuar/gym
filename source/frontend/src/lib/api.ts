@@ -105,7 +105,9 @@ export const payments = {
   create: (data: { user_id: number; plan_id: number; payment_method: string; proof_image_url?: string }) => post<Payment>('/payments', data),
   mine: () => get<{ payments: Payment[] }>('/payments/me'),
   listAll: (limit = 100, offset = 0) => get<{ payments: Payment[] }>(`/payments?limit=${limit}&offset=${offset}`),
-  mySubscription: () => get<Subscription>('/subscriptions/me'),
+  mySubscription: () => get<{ subscription: Subscription | null }>('/subscriptions/me'),
+  freeze: (freezeUntil: string) => post('/subscriptions/me/freeze', { freeze_until: freezeUntil }),
+  unfreeze: () => post('/subscriptions/me/unfreeze'),
 }
 
 // Disciplines

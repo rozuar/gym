@@ -314,6 +314,10 @@ func Migrate(db *sql.DB) error {
 
 	-- PR flag on results
 	ALTER TABLE user_routine_results ADD COLUMN IF NOT EXISTS is_pr BOOLEAN DEFAULT false;
+
+	-- Subscription freeze
+	ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS frozen BOOLEAN DEFAULT false;
+	ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS frozen_until TIMESTAMP;
 	`
 
 	_, err := db.Exec(query)
