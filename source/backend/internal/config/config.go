@@ -16,6 +16,10 @@ type Config struct {
 	InvitationClassPrice  int64 // Valor CLP de 1 clase invitación (variable global)
 	BeforeClassPhotoPrice int64 // Costo adicional CLP por foto antes de clase/rutina
 
+	// Booking window
+	BookingWindowDays  int // Cuántos días antes se puede reservar (0 = sin límite)
+	BookingCutoffHours int // Cuántas horas antes se cierra la reserva (0 = sin límite)
+
 	// Upload
 	UploadDir string
 	BaseURL   string
@@ -31,6 +35,8 @@ type Config struct {
 
 func Load() *Config {
 	port := getEnv("PORT", getEnv("API_PORT", "8080"))
+	bookingWindow, _ := strconv.Atoi(getEnv("BOOKING_WINDOW_DAYS", "7"))
+	bookingCutoff, _ := strconv.Atoi(getEnv("BOOKING_CUTOFF_HOURS", "1"))
 	invPrice, _ := strconv.ParseInt(getEnv("INVITATION_CLASS_PRICE", "15000"), 10, 64)
 	if invPrice <= 0 {
 		invPrice = 15000
@@ -50,6 +56,8 @@ func Load() *Config {
 		Environment:           getEnv("API_ENV", "development"),
 		InvitationClassPrice:  invPrice,
 		BeforeClassPhotoPrice: photoPrice,
+		BookingWindowDays:     bookingWindow,
+		BookingCutoffHours:    bookingCutoff,
 		UploadDir:             getEnv("UPLOAD_DIR", "./uploads"),
 		BaseURL:               getEnv("BASE_URL", "http://localhost:"+port),
 		SMTPHost:              getEnv("SMTP_HOST", ""),

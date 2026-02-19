@@ -8,25 +8,43 @@ import { Badge } from '../components/ui/Badge'
 
 const dayNames = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']
 
+interface BoxConfig { booking_window_days?: number; booking_cutoff_hours?: number }
+
+function isBookingClosed(schedDate: string, startTime: string, cutoffHours: number): boolean {
+  if (!cutoffHours) return false
+  try {
+    const classDateTime = new Date(`${schedDate}T${startTime}:00`)
+    const cutoff = new Date(classDateTime.getTime() - cutoffHours * 3600 * 1000)
+    return new Date() > cutoff
+  } catch { return false }
+}
+
 export default function SchedulePage() {
   const [dates, setDates] = useState<string[]>([])
   const [selected, setSelected] = useState('')
   const [items, setItems] = useState<Schedule[]>([])
   const [myBookings, setMyBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [boxConfig, setBoxConfig] = useState<BoxConfig>({})
   const navigate = useNavigate()
 
   useEffect(() => {
+    fetch('/api/v1/config').then(r => r.json()).then(setBoxConfig).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const windowDays = boxConfig.booking_window_days || 14
+    const totalDays = Math.min(windowDays, 14)
     const d: string[] = []
     const now = new Date()
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < totalDays; i++) {
       const dt = new Date(now)
       dt.setDate(now.getDate() + i)
       d.push(dt.toISOString().slice(0, 10))
     }
     setDates(d)
-    setSelected(d[0])
-  }, [])
+    if (!selected || !d.includes(selected)) setSelected(d[0] || '')
+  }, [boxConfig.booking_window_days])
 
   const loadDay = (day: string) => {
     setLoading(true)
@@ -81,6 +99,8 @@ export default function SchedulePage() {
                 <button onClick={() => navigate(`/leaderboard/${s.id}`)} className="text-muted hover:text-accent text-lg" title="Leaderboard">🏆</button>
                 {isBooked(s.id) ? (
                   <Badge variant="success">Reservado</Badge>
+                ) : isBookingClosed(s.date, s.start_time, boxConfig.booking_cutoff_hours || 0) ? (
+                  <Badge>Cerrado</Badge>
                 ) : s.available > 0 ? (
                   <Button size="sm" onClick={() => book(s.id)}>Reservar</Button>
                 ) : (

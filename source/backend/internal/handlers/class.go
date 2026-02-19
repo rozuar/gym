@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"boxmagic/internal/config"
 	"boxmagic/internal/middleware"
 	"boxmagic/internal/models"
 	"boxmagic/internal/repository"
@@ -18,6 +19,7 @@ type ClassHandler struct {
 	instructorRepo repository.InstructorRepo
 	userRepo       repository.UserRepo
 	emailService   *services.EmailService
+	cfg            *config.Config
 }
 
 func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.PaymentRepo, instructorRepo repository.InstructorRepo, userRepo repository.UserRepo, emailService *services.EmailService) *ClassHandler {
@@ -28,6 +30,10 @@ func NewClassHandler(classRepo repository.ClassRepo, paymentRepo repository.Paym
 		userRepo:       userRepo,
 		emailService:   emailService,
 	}
+}
+
+func (h *ClassHandler) SetConfig(cfg *config.Config) {
+	h.cfg = cfg
 }
 
 // Disciplines
@@ -370,6 +376,35 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate booking window
+	if h.cfg != nil {
+		sched, sErr := h.classRepo.GetScheduleByID(scheduleID)
+		if sErr == nil {
+			now := time.Now()
+			// Build class datetime from date + start_time
+			classDateTime, tErr := time.ParseInLocation("2006-01-02 15:04",
+				sched.Date.Format("2006-01-02")+" "+sched.StartTime, now.Location())
+			if tErr == nil {
+				if h.cfg.BookingCutoffHours > 0 {
+					cutoff := classDateTime.Add(-time.Duration(h.cfg.BookingCutoffHours) * time.Hour)
+					if now.After(cutoff) {
+						respondError(w, http.StatusBadRequest, "Booking is closed for this class")
+						return
+					}
+				}
+				if h.cfg.BookingWindowDays > 0 {
+					earliest := now.AddDate(0, 0, -1) // always allow booking same day
+					latest := now.AddDate(0, 0, h.cfg.BookingWindowDays)
+					if classDateTime.After(latest) {
+						_ = earliest
+						respondError(w, http.StatusBadRequest, "Class is too far in the future to book")
+						return
+					}
+				}
+			}
+		}
+	}
+
 	subscription, err := h.paymentRepo.GetActiveSubscription(userID)
 	useInvitation := false
 	if err != nil || subscription == nil {
@@ -377,6 +412,14 @@ func (h *ClassHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 		user, uErr := h.userRepo.GetByID(userID)
 		if uErr != nil || user == nil || user.InvitationClasses <= 0 {
 			respondError(w, http.StatusForbidden, "No active subscription")
+			return
+		}
+		useInvitation = true
+	} else if subscription.Frozen {
+		// Membresía congelada: verificar invitación
+		user, uErr := h.userRepo.GetByID(userID)
+		if uErr != nil || user == nil || user.InvitationClasses <= 0 {
+			respondError(w, http.StatusForbidden, "Subscription is frozen")
 			return
 		}
 		useInvitation = true

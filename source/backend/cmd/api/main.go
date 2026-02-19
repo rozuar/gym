@@ -54,6 +54,7 @@ func main() {
 	planHandler := handlers.NewPlanHandler(planRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentRepo, planRepo, userRepo)
 	classHandler := handlers.NewClassHandler(classRepo, paymentRepo, instructorRepo, userRepo, emailService)
+	classHandler.SetConfig(cfg)
 	routineHandler := handlers.NewRoutineHandler(routineRepo, feedRepo)
 	feedHandler := handlers.NewFeedHandler(feedRepo)
 	instructorHandler := handlers.NewInstructorHandler(instructorRepo)

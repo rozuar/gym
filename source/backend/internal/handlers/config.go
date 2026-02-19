@@ -19,5 +19,7 @@ func (h *ConfigHandler) Get(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"invitation_class_price":   h.cfg.InvitationClassPrice,
 		"before_class_photo_price": h.cfg.BeforeClassPhotoPrice,
+		"booking_window_days":      h.cfg.BookingWindowDays,
+		"booking_cutoff_hours":     h.cfg.BookingCutoffHours,
 	})
 }
