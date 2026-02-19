@@ -1,4 +1,4 @@
-import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert, Challenge, ChallengeParticipant, Lead, BodyMeasurement, ResultComment, OnrampProgram, OnrampEnrollment } from '../types'
+import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert, Challenge, ChallengeParticipant, Lead, BodyMeasurement, ResultComment, OnrampProgram, OnrampEnrollment, Movement, GymEvent, EventRegistration, Product, Sale, SaleItem, Tag, NutritionLog, WaterLog, NutritionSummary } from '../types'
 
 const BASE = '/api/v1'
 
@@ -283,6 +283,67 @@ export const onramp = {
   updateSessions: (userId: number, programId: number, sessions: number) => put(`/onramp/users/${userId}/programs/${programId}/sessions`, { sessions }),
   listEnrollments: (programId: number) => get<{ enrollments: OnrampEnrollment[] }>(`/onramp/programs/${programId}/enrollments`),
   myEnrollments: () => get<{ enrollments: OnrampEnrollment[] }>('/onramp/me'),
+}
+
+// Movements (2.4)
+export const movements = {
+  list: (category?: string, search?: string, activeOnly = true) => {
+    const p = new URLSearchParams()
+    if (category) p.set('category', category)
+    if (search) p.set('search', search)
+    if (!activeOnly) p.set('active', 'false')
+    return get<{ movements: Movement[] }>(`/movements?${p}`)
+  },
+  getById: (id: number) => get<Movement>(`/movements/${id}`),
+  create: (data: Partial<Movement>) => post<Movement>('/movements', data),
+  update: (id: number, data: Partial<Movement>) => put<Movement>(`/movements/${id}`, data),
+  remove: (id: number) => del(`/movements/${id}`),
+}
+
+// Events (16.1-16.4)
+export const events = {
+  list: (activeOnly = true) => get<{ events: GymEvent[] }>(`/events?active=${activeOnly}`),
+  mine: () => get<{ events: GymEvent[] }>('/events/me'),
+  getById: (id: number) => get<{ event: GymEvent; registrations: EventRegistration[] }>(`/events/${id}`),
+  create: (data: Partial<GymEvent> & { date: string }) => post<GymEvent>('/events', data),
+  update: (id: number, data: Partial<GymEvent> & { date?: string }) => put<GymEvent>(`/events/${id}`, data),
+  remove: (id: number) => del(`/events/${id}`),
+  register: (id: number) => post(`/events/${id}/register`),
+  unregister: (id: number) => del(`/events/${id}/register`),
+  listRegistrations: (id: number) => get<{ registrations: EventRegistration[] }>(`/events/${id}/registrations`),
+  updateRegistration: (id: number, userId: number, paid: boolean) => put(`/events/${id}/registrations`, { user_id: userId, paid }),
+}
+
+// Products / POS (5.6)
+export const products = {
+  list: (activeOnly = true) => get<{ products: Product[] }>(`/products?active=${activeOnly}`),
+  create: (data: Partial<Product>) => post<Product>('/products', data),
+  update: (id: number, data: Partial<Product>) => put<Product>(`/products/${id}`, data),
+  remove: (id: number) => del(`/products/${id}`),
+}
+export const sales = {
+  list: (limit = 50, offset = 0) => get<{ sales: Sale[] }>(`/sales?limit=${limit}&offset=${offset}`),
+  create: (data: { user_id?: number; payment_method: string; notes?: string; items: SaleItem[] }) => post<Sale>('/sales', data),
+}
+
+// Tags (6.8)
+export const tags = {
+  list: () => get<{ tags: Tag[] }>('/tags'),
+  create: (name: string, color: string) => post<Tag>('/tags', { name, color }),
+  update: (id: number, data: Partial<Tag>) => put<Tag>(`/tags/${id}`, data),
+  remove: (id: number) => del(`/tags/${id}`),
+  getUserTags: (userId: number) => get<{ tags: Tag[] }>(`/users/${userId}/tags`),
+  addUserTag: (userId: number, tagId: number) => post(`/users/${userId}/tags`, { tag_id: tagId }),
+  removeUserTag: (userId: number, tagId: number) => del(`/users/${userId}/tags/${tagId}`),
+}
+
+// Nutrition (9.4-9.7)
+export const nutrition = {
+  getDay: (date?: string) => get<{ logs: NutritionLog[]; summary: NutritionSummary; water: WaterLog[] }>(`/nutrition${date ? `?date=${date}` : ''}`),
+  logFood: (data: Partial<NutritionLog> & { food_name: string }) => post<NutritionLog>('/nutrition', data),
+  deleteLog: (id: number) => del(`/nutrition/${id}`),
+  logWater: (ml: number, date?: string) => post('/nutrition/water', { ml, logged_at: date }),
+  deleteWater: (id: number) => del(`/nutrition/water/${id}`),
 }
 
 // TV

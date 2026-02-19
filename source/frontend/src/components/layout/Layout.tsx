@@ -3,9 +3,9 @@ import { useAuth } from '../../contexts/AuthContext'
 
 const tabs = [
   { to: '/schedule', label: 'Horario', icon: '📅' },
-  { to: '/bookings', label: 'Reservas', icon: '🎫' },
-  { to: '/results', label: 'Resultados', icon: '💪' },
+  { to: '/results', label: 'Results', icon: '💪' },
   { to: '/feed', label: 'Feed', icon: '📢' },
+  { to: '/events', label: 'Eventos', icon: '🏆' },
   { to: '/profile', label: 'Perfil', icon: '👤' },
 ]
 

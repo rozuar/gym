@@ -3,16 +3,19 @@ package models
 import "time"
 
 type DashboardStats struct {
-	TotalUsers      int64 `json:"total_users"`
-	ActiveUsers     int64 `json:"active_users"`
-	InactiveUsers   int64 `json:"inactive_users"`
-	NewUsersMonth   int64 `json:"new_users_month"`
-	TotalRevenue    int64 `json:"total_revenue"`
-	RevenueMonth    int64 `json:"revenue_month"`
-	ActiveSubs      int64 `json:"active_subscriptions"`
-	ClassesToday    int64 `json:"classes_today"`
-	BookingsToday   int64 `json:"bookings_today"`
-	AttendanceToday int64 `json:"attendance_today"`
+	TotalUsers      int64   `json:"total_users"`
+	ActiveUsers     int64   `json:"active_users"`
+	InactiveUsers   int64   `json:"inactive_users"`
+	NewUsersMonth   int64   `json:"new_users_month"`
+	TotalRevenue    int64   `json:"total_revenue"`
+	RevenueMonth    int64   `json:"revenue_month"`
+	ActiveSubs      int64   `json:"active_subscriptions"`
+	ClassesToday    int64   `json:"classes_today"`
+	BookingsToday   int64   `json:"bookings_today"`
+	AttendanceToday int64   `json:"attendance_today"`
+	MRR             int64   `json:"mrr"`
+	ChurnRate       float64 `json:"churn_rate"`
+	NewLeads        int64   `json:"new_leads"`
 }
 
 type AttendanceStats struct {

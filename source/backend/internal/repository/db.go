@@ -348,6 +348,69 @@ func Migrate(db *sql.DB) error {
 	ALTER TABLE plans ADD COLUMN IF NOT EXISTS trial_price BIGINT DEFAULT 0;
 	ALTER TABLE plans ADD COLUMN IF NOT EXISTS trial_days INTEGER DEFAULT 0;
 
+	-- Leads / Pipeline de ventas (6.1)
+	CREATE TABLE IF NOT EXISTS leads (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		email VARCHAR(255),
+		phone VARCHAR(50),
+		source VARCHAR(50) DEFAULT 'other',
+		status VARCHAR(50) DEFAULT 'new',
+		notes TEXT,
+		assigned_to INTEGER REFERENCES users(id),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+
+	-- Body tracking / medidas corporales (9.1-9.3)
+	CREATE TABLE IF NOT EXISTS body_measurements (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		weight_kg DECIMAL(5,2),
+		body_fat_pct DECIMAL(4,1),
+		chest_cm DECIMAL(5,1),
+		waist_cm DECIMAL(5,1),
+		hip_cm DECIMAL(5,1),
+		arm_cm DECIMAL(5,1),
+		thigh_cm DECIMAL(5,1),
+		notes TEXT,
+		photo_url VARCHAR(500),
+		measured_at DATE NOT NULL DEFAULT CURRENT_DATE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_body_measurements_user ON body_measurements(user_id);
+
+	-- Comentarios en resultados (8.3)
+	CREATE TABLE IF NOT EXISTS result_comments (
+		id SERIAL PRIMARY KEY,
+		result_id INTEGER REFERENCES user_routine_results(id) ON DELETE CASCADE,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		content TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_result_comments_result ON result_comments(result_id);
+
+	-- On-ramp / Fundamentos (17.1-17.3)
+	CREATE TABLE IF NOT EXISTS onramp_programs (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		description TEXT,
+		required_sessions INTEGER DEFAULT 4,
+		active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS onramp_enrollments (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		program_id INTEGER REFERENCES onramp_programs(id) ON DELETE CASCADE,
+		sessions_completed INTEGER DEFAULT 0,
+		completed_at TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(user_id, program_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_onramp_enrollments_user ON onramp_enrollments(user_id);
+
 	-- Scaling options on routines (2.5)
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS content_scaled TEXT;
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS content_beginner TEXT;
@@ -379,6 +442,116 @@ func Migrate(db *sql.DB) error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_challenge_participants_challenge ON challenge_participants(challenge_id);
 	CREATE INDEX IF NOT EXISTS idx_challenge_participants_user ON challenge_participants(user_id);
+
+	-- Movements / biblioteca (2.4)
+	CREATE TABLE IF NOT EXISTS movements (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		description TEXT,
+		category VARCHAR(100) DEFAULT 'other',
+		video_url VARCHAR(500),
+		muscles_primary VARCHAR(500),
+		muscles_secondary VARCHAR(500),
+		active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_movements_category ON movements(category);
+	CREATE INDEX IF NOT EXISTS idx_movements_name ON movements(name);
+
+	-- Events / competencias (16.1-16.4)
+	CREATE TABLE IF NOT EXISTS events (
+		id SERIAL PRIMARY KEY,
+		title VARCHAR(255) NOT NULL,
+		description TEXT,
+		event_type VARCHAR(50) DEFAULT 'event',
+		date TIMESTAMP NOT NULL,
+		capacity INTEGER DEFAULT 0,
+		price INTEGER DEFAULT 0,
+		currency VARCHAR(10) DEFAULT 'CLP',
+		image_url VARCHAR(500),
+		active BOOLEAN DEFAULT true,
+		created_by INTEGER REFERENCES users(id),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS event_registrations (
+		id SERIAL PRIMARY KEY,
+		event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		status VARCHAR(50) DEFAULT 'registered',
+		paid BOOLEAN DEFAULT false,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(event_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_event_registrations_event ON event_registrations(event_id);
+	CREATE INDEX IF NOT EXISTS idx_event_registrations_user ON event_registrations(user_id);
+
+	-- Products / Retail POS (5.6)
+	CREATE TABLE IF NOT EXISTS products (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		description TEXT,
+		category VARCHAR(100) DEFAULT 'other',
+		price INTEGER NOT NULL DEFAULT 0,
+		stock INTEGER DEFAULT -1,
+		image_url VARCHAR(500),
+		active BOOLEAN DEFAULT true,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS sales (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id),
+		total INTEGER NOT NULL,
+		payment_method VARCHAR(50) DEFAULT 'cash',
+		notes TEXT,
+		created_by INTEGER REFERENCES users(id),
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS sale_items (
+		id SERIAL PRIMARY KEY,
+		sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+		product_id INTEGER REFERENCES products(id),
+		product_name VARCHAR(255) NOT NULL,
+		quantity INTEGER NOT NULL DEFAULT 1,
+		unit_price INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
+	CREATE INDEX IF NOT EXISTS idx_sales_created ON sales(created_at);
+
+	-- Member tags (6.8)
+	CREATE TABLE IF NOT EXISTS tags (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(100) NOT NULL UNIQUE,
+		color VARCHAR(20) DEFAULT '#3b82f6'
+	);
+	CREATE TABLE IF NOT EXISTS user_tags (
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+		PRIMARY KEY (user_id, tag_id)
+	);
+
+	-- Nutrition tracking (9.4-9.7)
+	CREATE TABLE IF NOT EXISTS nutrition_logs (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		food_name VARCHAR(255) NOT NULL,
+		grams DECIMAL(6,1),
+		calories DECIMAL(6,1),
+		protein_g DECIMAL(5,1),
+		carbs_g DECIMAL(5,1),
+		fat_g DECIMAL(5,1),
+		meal_type VARCHAR(50) DEFAULT 'other',
+		logged_at DATE DEFAULT CURRENT_DATE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_nutrition_logs_user_date ON nutrition_logs(user_id, logged_at);
+	CREATE TABLE IF NOT EXISTS water_logs (
+		id SERIAL PRIMARY KEY,
+		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+		ml INTEGER NOT NULL,
+		logged_at DATE DEFAULT CURRENT_DATE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_water_logs_user_date ON water_logs(user_id, logged_at);
 	`
 
 	_, err := db.Exec(query)

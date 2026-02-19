@@ -263,6 +263,181 @@ export interface DashboardStats {
   classes_today: number
   bookings_today: number
   attendance_today: number
+  mrr: number
+  churn_rate: number
+  new_leads: number
+}
+
+export interface Lead {
+  id: number
+  name: string
+  email?: string
+  phone?: string
+  source: string
+  status: string
+  notes?: string
+  assigned_to?: number
+  assignee_name?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface BodyMeasurement {
+  id: number
+  user_id: number
+  weight_kg?: number
+  body_fat_pct?: number
+  chest_cm?: number
+  waist_cm?: number
+  hip_cm?: number
+  arm_cm?: number
+  thigh_cm?: number
+  notes?: string
+  photo_url?: string
+  measured_at: string
+  created_at: string
+}
+
+export interface ResultComment {
+  id: number
+  result_id: number
+  user_id: number
+  user_name: string
+  avatar_url?: string
+  content: string
+  created_at: string
+}
+
+export interface OnrampProgram {
+  id: number
+  name: string
+  description?: string
+  required_sessions: number
+  active: boolean
+  created_at: string
+  enrolled_count?: number
+}
+
+export interface OnrampEnrollment {
+  id: number
+  user_id: number
+  program_id: number
+  sessions_completed: number
+  completed_at?: string
+  created_at: string
+  user_name?: string
+  user_email?: string
+  program_name?: string
+}
+
+export interface Movement {
+  id: number
+  name: string
+  description: string
+  category: string
+  video_url: string
+  muscles_primary: string
+  muscles_secondary: string
+  active: boolean
+  created_at: string
+}
+
+export interface GymEvent {
+  id: number
+  title: string
+  description: string
+  event_type: string
+  date: string
+  capacity: number
+  price: number
+  currency: string
+  image_url: string
+  active: boolean
+  created_by: number
+  created_at: string
+  registered_count: number
+  is_registered: boolean
+}
+
+export interface EventRegistration {
+  id: number
+  event_id: number
+  user_id: number
+  status: string
+  paid: boolean
+  created_at: string
+  user_name: string
+  user_email: string
+}
+
+export interface Product {
+  id: number
+  name: string
+  description: string
+  category: string
+  price: number
+  stock: number
+  image_url: string
+  active: boolean
+  created_at: string
+}
+
+export interface SaleItem {
+  id?: number
+  sale_id?: number
+  product_id?: number | null
+  product_name: string
+  quantity: number
+  unit_price: number
+}
+
+export interface Sale {
+  id: number
+  user_id?: number
+  total: number
+  payment_method: string
+  notes: string
+  created_by: number
+  created_at: string
+  items: SaleItem[]
+  user_name: string
+}
+
+export interface Tag {
+  id: number
+  name: string
+  color: string
+}
+
+export interface NutritionLog {
+  id: number
+  user_id: number
+  food_name: string
+  grams?: number
+  calories?: number
+  protein_g?: number
+  carbs_g?: number
+  fat_g?: number
+  meal_type: string
+  logged_at: string
+  created_at: string
+}
+
+export interface WaterLog {
+  id: number
+  user_id: number
+  ml: number
+  logged_at: string
+  created_at: string
+}
+
+export interface NutritionSummary {
+  date: string
+  calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  water_ml: number
 }
 
 export interface TVSchedule extends Schedule {

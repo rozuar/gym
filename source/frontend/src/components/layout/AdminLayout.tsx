@@ -12,6 +12,9 @@ const tabs = [
   { to: '/admin/challenges', label: 'Challenges' },
   { to: '/admin/leads', label: 'Leads' },
   { to: '/admin/onramp', label: 'On-ramp' },
+  { to: '/admin/events', label: 'Eventos' },
+  { to: '/admin/movements', label: 'Movimientos' },
+  { to: '/admin/pos', label: 'POS' },
   { to: '/admin/instructors', label: 'Instructores' },
 ]
 

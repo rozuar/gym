@@ -16,6 +16,10 @@ import Profile from './pages/Profile'
 import Plans from './pages/Plans'
 import Leaderboard from './pages/Leaderboard'
 import BodyTracking from './pages/BodyTracking'
+import Nutrition from './pages/Nutrition'
+import Events from './pages/Events'
+import Timer from './pages/Timer'
+import Calculator from './pages/Calculator'
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard'
@@ -30,6 +34,9 @@ import AdminInstructors from './pages/admin/Instructors'
 import AdminChallenges from './pages/admin/Challenges'
 import AdminLeads from './pages/admin/Leads'
 import AdminOnramp from './pages/admin/Onramp'
+import AdminEvents from './pages/admin/Events'
+import AdminMovements from './pages/admin/Movements'
+import AdminPOS from './pages/admin/POS'
 import Challenges from './pages/Challenges'
 
 // Public
@@ -61,6 +68,10 @@ export default function App() {
         <Route path="/leaderboard/:scheduleId?" element={<Leaderboard />} />
         <Route path="/challenges" element={<Challenges />} />
         <Route path="/body-tracking" element={<BodyTracking />} />
+        <Route path="/nutrition" element={<Nutrition />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/timer" element={<Timer />} />
+        <Route path="/calculator" element={<Calculator />} />
       </Route>
 
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
@@ -75,6 +86,9 @@ export default function App() {
         <Route path="challenges" element={<AdminChallenges />} />
         <Route path="leads" element={<AdminLeads />} />
         <Route path="onramp" element={<AdminOnramp />} />
+        <Route path="events" element={<AdminEvents />} />
+        <Route path="movements" element={<AdminMovements />} />
+        <Route path="pos" element={<AdminPOS />} />
         <Route path="instructors" element={<AdminInstructors />} />
       </Route>
 

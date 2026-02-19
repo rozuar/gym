@@ -36,6 +36,27 @@ func (r *StatsRepository) GetDashboard() (*models.DashboardStats, error) {
 	r.db.QueryRow(`SELECT COUNT(*) FROM bookings b JOIN class_schedules cs ON b.class_schedule_id = cs.id WHERE cs.date = CURRENT_DATE AND b.status IN ('booked', 'attended')`).Scan(&stats.BookingsToday)
 	r.db.QueryRow(`SELECT COUNT(*) FROM bookings b JOIN class_schedules cs ON b.class_schedule_id = cs.id WHERE cs.date = CURRENT_DATE AND b.status = 'attended'`).Scan(&stats.AttendanceToday)
 
+	// MRR: sum of plan prices normalized to monthly for active subscriptions
+	// MRR = SUM(plan.price * 30 / plan.duration) for active subs
+	r.db.QueryRow(`SELECT COALESCE(SUM(p.price * 30 / NULLIF(p.duration,0)), 0)
+			  FROM subscriptions s
+			  JOIN plans p ON s.plan_id = p.id
+			  WHERE s.active = true AND s.end_date > NOW() AND s.frozen = false`).Scan(&stats.MRR)
+
+	// Churn: users with active sub last month who don't have one now
+	var lastMonthSubs, lostSubs int64
+	r.db.QueryRow(`SELECT COUNT(DISTINCT user_id) FROM subscriptions
+			  WHERE active = true AND end_date > NOW() - INTERVAL '30 days' AND start_date < NOW() - INTERVAL '30 days'`).Scan(&lastMonthSubs)
+	r.db.QueryRow(`SELECT COUNT(DISTINCT user_id) FROM subscriptions s1
+			  WHERE end_date BETWEEN NOW() - INTERVAL '30 days' AND NOW()
+			  AND NOT EXISTS (SELECT 1 FROM subscriptions s2 WHERE s2.user_id = s1.user_id AND s2.active = true AND s2.end_date > NOW())`).Scan(&lostSubs)
+	if lastMonthSubs > 0 {
+		stats.ChurnRate = float64(lostSubs) / float64(lastMonthSubs) * 100
+	}
+
+	// New leads this month
+	r.db.QueryRow("SELECT COUNT(*) FROM leads WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)").Scan(&stats.NewLeads)
+
 	return stats, nil
 }
 
