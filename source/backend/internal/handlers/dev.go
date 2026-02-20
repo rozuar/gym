@@ -23,12 +23,6 @@ func SeedTestUsers(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		userRepo := repository.NewUserRepository(db)
-
-		// Remove existing test users so they are re-created with known passwords
-		_ = userRepo.DeleteByEmail("admin@boxmagic.cl")
-		_ = userRepo.DeleteByEmail("user@boxmagic.cl")
-
 		adminHash, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to create admin user")
@@ -40,26 +34,19 @@ func SeedTestUsers(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		admin := &models.User{
-			Email:        "admin@boxmagic.cl",
-			PasswordHash: string(adminHash),
-			Name:         "Administrador",
-			Role:         models.RoleAdmin,
-			Active:       true,
-		}
-		if err := userRepo.Create(admin); err != nil {
+		upsert := `INSERT INTO users (email, password_hash, name, role, active)
+			VALUES ($1, $2, $3, $4, true)
+			ON CONFLICT (email) DO UPDATE SET
+				password_hash = EXCLUDED.password_hash,
+				name = EXCLUDED.name,
+				role = EXCLUDED.role,
+				active = true`
+
+		if _, err := db.Exec(upsert, "admin@boxmagic.cl", string(adminHash), "Administrador", models.RoleAdmin); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to create admin user")
 			return
 		}
-
-		user := &models.User{
-			Email:        "user@boxmagic.cl",
-			PasswordHash: string(userHash),
-			Name:         "Usuario Demo",
-			Role:         models.RoleUser,
-			Active:       true,
-		}
-		if err := userRepo.Create(user); err != nil {
+		if _, err := db.Exec(upsert, "user@boxmagic.cl", string(userHash), "Usuario Demo", models.RoleUser); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to create test user")
 			return
 		}
@@ -116,9 +103,6 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		if testUserID != 0 {
 			_, _ = db.Exec("DELETE FROM refresh_tokens WHERE user_id = $1", testUserID)
 		}
-		_ = userRepo.DeleteByEmail("admin@boxmagic.cl")
-		_ = userRepo.DeleteByEmail("user@boxmagic.cl")
-
 		// 2. Disciplines (always ensure we have them)
 		var discCount int
 		_ = db.QueryRow("SELECT COUNT(*) FROM disciplines").Scan(&discCount)
@@ -141,21 +125,26 @@ func SeedAllDevData(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 				('Plan 8 Clases', '8 clases en 30 dias', 28000, 30, 8, true)`)
 		}
 
-		// 4. Create test users
+		// 4. Create test users (upsert to avoid FK violations when user already exists)
+		upsert := `INSERT INTO users (email, password_hash, name, role, active)
+			VALUES ($1, $2, $3, $4, true)
+			ON CONFLICT (email) DO UPDATE SET
+				password_hash = EXCLUDED.password_hash,
+				name = EXCLUDED.name,
+				role = EXCLUDED.role,
+				active = true
+			RETURNING id`
 		adminHash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		userHash, _ := bcrypt.GenerateFromPassword([]byte("user123"), bcrypt.DefaultCost)
-		admin := &models.User{Email: "admin@boxmagic.cl", PasswordHash: string(adminHash), Name: "Administrador", Role: models.RoleAdmin, Active: true}
-		if err := userRepo.Create(admin); err != nil {
+		if err := db.QueryRow(upsert, "admin@boxmagic.cl", string(adminHash), "Administrador", models.RoleAdmin).Scan(&adminID); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to create admin user")
 			return
 		}
-		user := &models.User{Email: "user@boxmagic.cl", PasswordHash: string(userHash), Name: "Usuario Demo", Role: models.RoleUser, Active: true}
-		if err := userRepo.Create(user); err != nil {
+		var userID int64
+		if err := db.QueryRow(upsert, "user@boxmagic.cl", string(userHash), "Usuario Demo", models.RoleUser).Scan(&userID); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to create test user")
 			return
 		}
-		adminID = admin.ID
-		userID := user.ID
 
 		// 5. Instructors (create first)
 		instructors := []*models.Instructor{
