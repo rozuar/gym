@@ -240,6 +240,9 @@ func Migrate(db *sql.DB) error {
 		END IF;
 	END $$;
 
+	-- Disciplines: color column
+	ALTER TABLE disciplines ADD COLUMN IF NOT EXISTS color VARCHAR(20);
+
 	-- Add billable, target_user_id, is_custom to routines
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS billable BOOLEAN DEFAULT false;
 	ALTER TABLE routines ADD COLUMN IF NOT EXISTS target_user_id INTEGER REFERENCES users(id);

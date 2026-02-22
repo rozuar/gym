@@ -42,7 +42,7 @@ func (r *ClassRepository) DeleteDiscipline(id int64) error {
 }
 
 func (r *ClassRepository) ListDisciplines(activeOnly bool) ([]*models.Discipline, error) {
-	query := `SELECT id, name, description, color, active, created_at FROM disciplines`
+	query := `SELECT id, name, COALESCE(description,''), COALESCE(color,''), active, created_at FROM disciplines`
 	if activeOnly {
 		query += " WHERE active = true"
 	}
