@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Textarea } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmt(d: string) {
   const p = new Date(d + 'T00:00:00')
@@ -91,7 +92,7 @@ export default function BodyTrackingPage() {
     try {
       await bodyTracking.create(payload as any)
       setShowForm(false); setForm(emptyForm()); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {

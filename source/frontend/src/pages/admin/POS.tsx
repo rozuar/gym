@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { Input, Select, Textarea } from '../../components/ui/Input'
+import { toast } from 'sonner'
 
 function fmtCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
 function fmt(d: string) { return new Date(d).toLocaleDateString('es-CL') }
@@ -43,13 +44,13 @@ export default function AdminPOS() {
     setShowProdForm(true)
   }
   const submitProd = async () => {
-    if (!prodForm.name.trim()) return alert('Nombre requerido')
+    if (!prodForm.name.trim()) return toast.error('Nombre requerido')
     const data = { name: prodForm.name, description: prodForm.description, category: prodForm.category, price: Number(prodForm.price), stock: Number(prodForm.stock) }
     try {
       if (editProdId) await productsApi.update(editProdId, data)
       else await productsApi.create(data)
       setShowProdForm(false); loadProds()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
   const delProd = async (id: number) => { if (!confirm('Eliminar?')) return; await productsApi.remove(id); loadProds() }
 
@@ -64,11 +65,11 @@ export default function AdminPOS() {
   const cartTotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0)
 
   const submitSale = async () => {
-    if (cart.length === 0) return alert('Carrito vacío')
+    if (cart.length === 0) return toast.error('Carrito vacío')
     try {
       await salesApi.create({ user_id: saleUserId ? Number(saleUserId) : undefined, payment_method: saleMethod, notes: saleNotes, items: cart })
       setCart([]); setSaleUserId(''); setSaleNotes(''); setTab('sales'); loadProds()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const pf = (k: keyof ProductForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>

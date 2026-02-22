@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 const dayNames = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado']
 
@@ -32,7 +33,7 @@ export default function AdminClasses() {
       if (discForm.id) await discApi.update(discForm.id, { name: discForm.name, description: discForm.description, color: discForm.color, active: discForm.active } as any)
       else await discApi.create({ name: discForm.name, description: discForm.description, color: discForm.color } as any)
       setShowDisc(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const saveClass = async () => {
@@ -40,7 +41,7 @@ export default function AdminClasses() {
       if (classForm.id) await classesApi.update(classForm.id, { name: classForm.name, description: classForm.description, start_time: classForm.start_time, end_time: classForm.end_time, capacity: classForm.capacity, instructor_ids: classForm.instructor_ids } as any)
       else await classesApi.create({ discipline_id: classForm.discipline_id, name: classForm.name, description: classForm.description, day_of_week: classForm.day_of_week, start_time: classForm.start_time, end_time: classForm.end_time, capacity: classForm.capacity, instructor_ids: classForm.instructor_ids } as any)
       setShowClass(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const delDisc = async (id: number) => { if (!confirm('Eliminar disciplina?')) return; await discApi.remove(id); load() }

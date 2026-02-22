@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Textarea } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmtCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
 
@@ -24,7 +25,7 @@ export default function AdminPlans() {
       if (form.id) await plansApi.update(form.id, { ...data, active: form.active })
       else await plansApi.create(data)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => { if (!confirm('Eliminar plan?')) return; await plansApi.remove(id); load() }

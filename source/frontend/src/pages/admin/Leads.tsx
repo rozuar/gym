@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { Input, Select, Textarea } from '../../components/ui/Input'
+import { toast } from 'sonner'
 
 const STATUSES = ['new', 'contacted', 'trial', 'converted', 'lost'] as const
 const STATUS_LABELS: Record<string, string> = {
@@ -56,12 +57,12 @@ export default function AdminLeads() {
   }
 
   const submit = async () => {
-    if (!form.name.trim()) return alert('Nombre requerido')
+    if (!form.name.trim()) return toast.error('Nombre requerido')
     try {
       if (editId) await leads.update(editId, form)
       else await leads.create(form)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {

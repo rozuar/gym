@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input, Textarea } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmtDate(d?: string) {
   if (!d) return ''
@@ -32,14 +33,14 @@ function ChallengeDetail({
 
   const join = async () => {
     setBusy(true)
-    try { await api.join(challenge.id); onRefresh() } catch (e: any) { alert(e.message) }
+    try { await api.join(challenge.id); onRefresh() } catch (e: any) { toast.error(e.message) }
     setBusy(false)
   }
 
   const leave = async () => {
     if (!confirm('¿Abandonar el challenge?')) return
     setBusy(true)
-    try { await api.leave(challenge.id); onRefresh() } catch (e: any) { alert(e.message) }
+    try { await api.leave(challenge.id); onRefresh() } catch (e: any) { toast.error(e.message) }
     setBusy(false)
   }
 
@@ -49,7 +50,7 @@ function ChallengeDetail({
       await api.submitProgress(challenge.id, score, notes)
       setShowSubmit(false)
       onRefresh()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
     setBusy(false)
   }
 

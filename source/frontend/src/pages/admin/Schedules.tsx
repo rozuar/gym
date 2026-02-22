@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmt(d: string) { const p = new Date(d); return `${p.getDate().toString().padStart(2,'0')}/${(p.getMonth()+1).toString().padStart(2,'0')}` }
 
@@ -24,8 +25,8 @@ export default function AdminSchedules() {
   const load = () => { setLoading(true); schedApi.list(from, to, true).then(r => setItems(r.schedules || [])).finally(() => setLoading(false)) }
   useEffect(load, [from, to])
 
-  const generate = async () => { try { await schedApi.generate(from); load() } catch (e: any) { alert(e.message) } }
-  const cancel = async (id: number) => { if (!confirm('Cancelar clase?')) return; try { await schedApi.cancel(id); load() } catch (e: any) { alert(e.message) } }
+  const generate = async () => { try { await schedApi.generate(from); load() } catch (e: any) { toast.error(e.message) } }
+  const cancel = async (id: number) => { if (!confirm('Cancelar clase?')) return; try { await schedApi.cancel(id); load() } catch (e: any) { toast.error(e.message) } }
 
   const openAtt = async (s: Schedule) => {
     setAttModal(s); setAttTab('bookings')
@@ -35,11 +36,11 @@ export default function AdminSchedules() {
     routApi.list().then(r => setRoutineList(r.routines || []))
   }
 
-  const checkin = async (id: number) => { try { await bookApi.checkin(id); if (attModal) openAtt(attModal) } catch (e: any) { alert(e.message) } }
+  const checkin = async (id: number) => { try { await bookApi.checkin(id); if (attModal) openAtt(attModal) } catch (e: any) { toast.error(e.message) } }
 
   const assignRoutine = async () => {
     if (!attModal || !selRoutine) return
-    try { await routApi.assignToSchedule(attModal.id, selRoutine); alert('Rutina asignada') } catch (e: any) { alert(e.message) }
+    try { await routApi.assignToSchedule(attModal.id, selRoutine); toast.success('Rutina asignada') } catch (e: any) { toast.error(e.message) }
   }
 
   return (

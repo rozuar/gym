@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { Input, Select, Textarea } from '../../components/ui/Input'
+import { toast } from 'sonner'
 
 function fmtDate(d: string) { return new Date(d).toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' }) }
 function fmtCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
@@ -45,13 +46,13 @@ export default function AdminEvents() {
   }
 
   const submit = async () => {
-    if (!form.title.trim() || !form.date) return alert('Título y fecha requeridos')
+    if (!form.title.trim() || !form.date) return toast.error('Título y fecha requeridos')
     const data = { title: form.title, description: form.description, event_type: form.event_type, date: form.date, capacity: Number(form.capacity), price: Number(form.price), currency: form.currency }
     try {
       if (editId) await eventsApi.update(editId, data)
       else await eventsApi.create(data)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {

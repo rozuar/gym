@@ -4,6 +4,7 @@ import type { Booking } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
+import { toast } from 'sonner'
 
 function fmt(d: string) { const p = new Date(d); return `${p.getDate().toString().padStart(2,'0')}/${(p.getMonth()+1).toString().padStart(2,'0')}/${p.getFullYear()}` }
 const statusV: Record<string, 'success' | 'warning' | 'danger' | 'default'> = { booked: 'success', attended: 'success', cancelled: 'danger', no_show: 'warning' }
@@ -16,11 +17,11 @@ export default function BookingsPage() {
   const load = () => { setLoading(true); bookings.mine(tab === 'upcoming').then(r => setItems(r.bookings || [])).finally(() => setLoading(false)) }
   useEffect(load, [tab])
 
-  const cancel = async (id: number) => { if (!confirm('Cancelar reserva?')) return; try { await bookings.cancel(id); load() } catch (e: any) { alert(e.message) } }
+  const cancel = async (id: number) => { if (!confirm('Cancelar reserva?')) return; try { await bookings.cancel(id); load() } catch (e: any) { toast.error(e.message) } }
 
   const uploadPhoto = async (id: number) => {
     const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'
-    input.onchange = async () => { const f = input.files?.[0]; if (!f) return; try { const url = await uploadFile(f); await bookings.beforePhoto(id, url); load() } catch (e: any) { alert(e.message) } }
+    input.onchange = async () => { const f = input.files?.[0]; if (!f) return; try { const url = await uploadFile(f); await bookings.beforePhoto(id, url); load() } catch (e: any) { toast.error(e.message) } }
     input.click()
   }
 

@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmtCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
 
@@ -19,11 +20,11 @@ export default function AdminDiscountCodes() {
   useEffect(load, [])
 
   const save = async () => {
-    if (!form.code || !form.discount_value) return alert('Código y valor requeridos')
+    if (!form.code || !form.discount_value) return toast.error('Código y valor requeridos')
     try {
       await api.create({ code: form.code.toUpperCase(), description: form.description, discount_type: form.discount_type, discount_value: form.discount_value, max_uses: form.max_uses, valid_until: form.valid_until || undefined } as any)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {

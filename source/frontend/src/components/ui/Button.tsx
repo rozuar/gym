@@ -6,10 +6,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: 'bg-accent hover:bg-accent-hover text-white',
-  secondary: 'bg-card hover:bg-border text-white border border-border',
-  danger: 'bg-danger hover:bg-red-600 text-white',
-  ghost: 'hover:bg-card text-muted hover:text-white',
+  primary: 'bg-gradient-to-r from-accent to-accent-2 hover:from-accent-hover hover:to-accent text-white shadow-lg shadow-accent/20 hover:shadow-accent/40',
+  secondary: 'bg-white/5 hover:bg-white/10 text-white border border-accent/20 hover:border-accent/40',
+  danger: 'bg-danger/90 hover:bg-danger text-white shadow-lg shadow-danger/20',
+  ghost: 'hover:bg-white/5 text-muted hover:text-white',
 }
 
 const sizes = {
@@ -21,7 +21,7 @@ const sizes = {
 export function Button({ variant = 'primary', size = 'md', className = '', disabled, ...props }: ButtonProps) {
   return (
     <button
-      className={`rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`rounded-xl font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled}
       {...props}
     />

@@ -5,6 +5,7 @@ import type { Schedule, Booking } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
+import { toast } from 'sonner'
 
 const dayNames = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab']
 
@@ -62,11 +63,11 @@ export default function SchedulePage() {
   const isBooked = (id: number) => myBookings.some(b => b.class_schedule_id === id && b.status === 'booked')
 
   const book = async (id: number) => {
-    try { await bookings.create(id); loadDay(selected) } catch (e: any) { alert(e.message) }
+    try { await bookings.create(id); loadDay(selected) } catch (e: any) { toast.error(e.message) }
   }
 
   const joinWL = async (id: number) => {
-    try { await waitlist.join(id); alert('Agregado a la lista de espera') } catch (e: any) { alert(e.message) }
+    try { await waitlist.join(id); toast.success('Agregado a la lista de espera') } catch (e: any) { toast.error(e.message) }
   }
 
   return (

@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 const types = ['', 'wod', 'strength', 'skill', 'cardio']
 
@@ -24,7 +25,7 @@ export default function AdminRoutines() {
       if (form.id) await routApi.update(form.id, { name: form.name, description: form.description, type: form.type, content: form.content, content_scaled: form.content_scaled, content_beginner: form.content_beginner, duration: form.duration || undefined, difficulty: form.difficulty } as any)
       else await routApi.create({ name: form.name, description: form.description, type: form.type, content: form.content, content_scaled: form.content_scaled, content_beginner: form.content_beginner, duration: form.duration || undefined, difficulty: form.difficulty } as any)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => { if (!confirm('Eliminar rutina?')) return; await routApi.remove(id); load() }

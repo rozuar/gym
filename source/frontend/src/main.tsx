@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AuthProvider } from './contexts/AuthContext'
 import App from './App'
 import './index.css'
@@ -10,6 +11,17 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <App />
+        <Toaster
+          theme="dark"
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#12123a',
+              border: '1px solid rgba(139,92,246,0.3)',
+              color: '#f1f0ff',
+            },
+          }}
+        />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

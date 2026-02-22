@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { useAuth } from '../contexts/AuthContext'
+import { toast } from 'sonner'
 
 function fmt(d: string) { const p = new Date(d); return `${p.getDate().toString().padStart(2,'0')}/${(p.getMonth()+1).toString().padStart(2,'0')}/${p.getFullYear()}` }
 
@@ -31,7 +32,7 @@ function CommentsSection({ resultId }: { resultId: number }) {
     if (!text.trim()) return
     setSubmitting(true)
     try { await commentsApi.create(resultId, text.trim()); setText(''); load() }
-    catch (e: any) { alert(e.message) }
+    catch (e: any) { toast.error(e.message) }
     finally { setSubmitting(false) }
   }
 
@@ -101,12 +102,12 @@ export default function ResultsPage() {
   useEffect(() => { load(); routinesApi.list().then(r => setRList(r.routines || [])) }, [])
 
   const submit = async () => {
-    if (!form.score) return alert('Score requerido')
+    if (!form.score) return toast.error('Score requerido')
     try {
       if (editId) { await results.update(editId, { score: form.score, notes: form.notes, rx: form.rx }) }
-      else { if (!form.routine_id) return alert('Selecciona rutina'); await results.log({ routine_id: form.routine_id, score: form.score, notes: form.notes, rx: form.rx }) }
+      else { if (!form.routine_id) return toast.error('Selecciona rutina'); await results.log({ routine_id: form.routine_id, score: form.score, notes: form.notes, rx: form.rx }) }
       setShowLog(false); setEditId(null); setForm({ routine_id: 0, score: '', notes: '', rx: false }); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => { if (!confirm('Eliminar?')) return; await results.remove(id); load() }

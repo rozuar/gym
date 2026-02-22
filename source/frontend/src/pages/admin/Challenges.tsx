@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmtDate(d?: string) {
   if (!d) return ''
@@ -45,12 +46,12 @@ export default function AdminChallenges() {
       }
       setShowForm(false)
       load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {
     if (!confirm('¿Eliminar challenge?')) return
-    try { await api.remove(id); load() } catch (e: any) { alert(e.message) }
+    try { await api.remove(id); load() } catch (e: any) { toast.error(e.message) }
   }
 
   const openNew = () => {

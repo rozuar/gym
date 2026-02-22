@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 export default function AdminUsers() {
   const [items, setItems] = useState<User[]>([])
@@ -25,12 +26,12 @@ export default function AdminUsers() {
 
   const save = async () => {
     if (!editUser) return
-    try { await usersApi.update(editUser.id, { name: form.name, phone: form.phone, role: form.role, active: form.active } as any); setEditUser(null); load() } catch (e: any) { alert(e.message) }
+    try { await usersApi.update(editUser.id, { name: form.name, phone: form.phone, role: form.role, active: form.active } as any); setEditUser(null); load() } catch (e: any) { toast.error(e.message) }
   }
 
   const addInv = async () => {
     if (!invModal) return
-    try { await usersApi.addInvitation(invModal.id, invCount); setInvModal(null); load() } catch (e: any) { alert(e.message) }
+    try { await usersApi.addInvitation(invModal.id, invCount); setInvModal(null); load() } catch (e: any) { toast.error(e.message) }
   }
 
   return (

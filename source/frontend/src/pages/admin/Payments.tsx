@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmtCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
 function fmt(d: string) { return new Date(d).toLocaleDateString('es-CL') }
@@ -53,12 +54,12 @@ export default function AdminPayments() {
     try {
       await payApi.create({ user_id: form.user_id, plan_id: form.plan_id, payment_method: form.payment_method, proof_image_url: form.proof_image_url || undefined, discount_code: form.discount_code || undefined } as any)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const uploadProof = async () => {
     const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'
-    input.onchange = async () => { const f = input.files?.[0]; if (!f) return; try { const url = await uploadFile(f); setForm(prev => ({ ...prev, proof_image_url: url })) } catch (e: any) { alert(e.message) } }
+    input.onchange = async () => { const f = input.files?.[0]; if (!f) return; try { const url = await uploadFile(f); setForm(prev => ({ ...prev, proof_image_url: url })) } catch (e: any) { toast.error(e.message) } }
     input.click()
   }
 

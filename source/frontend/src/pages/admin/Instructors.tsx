@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input, Textarea } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
+import { toast } from 'sonner'
 
 export default function AdminInstructors() {
   const [items, setItems] = useState<Instructor[]>([])
@@ -21,7 +22,7 @@ export default function AdminInstructors() {
       if (form.id) await instApi.update(form.id, { name: form.name, email: form.email, phone: form.phone, specialty: form.specialty, bio: form.bio, active: form.active } as any)
       else await instApi.create({ name: form.name, email: form.email, phone: form.phone, specialty: form.specialty, bio: form.bio } as any)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => { if (!confirm('Eliminar instructor?')) return; await instApi.remove(id); load() }

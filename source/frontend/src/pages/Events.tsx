@@ -4,6 +4,7 @@ import type { GymEvent } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
+import { toast } from 'sonner'
 
 function fmtDate(d: string) { return new Date(d).toLocaleString('es-CL', { dateStyle: 'long', timeStyle: 'short' }) }
 function fmtCLP(n: number) { return '$' + n.toLocaleString('es-CL') }
@@ -32,7 +33,7 @@ export default function EventsPage() {
         await eventsApi.register(e.id)
       }
       load()
-    } catch (err: any) { alert(err.message) }
+    } catch (err: any) { toast.error(err.message) }
   }
 
   if (loading && items.length === 0) return <p className="text-muted text-center py-8">Cargando...</p>

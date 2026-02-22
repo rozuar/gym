@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Select } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { toast } from 'sonner'
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack', 'other']
 const MEAL_LABELS: Record<string, string> = {
@@ -55,7 +56,7 @@ export default function NutritionPage() {
   useEffect(() => { load(date) }, [date])
 
   const submitFood = async () => {
-    if (!foodForm.food_name.trim()) return alert('Nombre requerido')
+    if (!foodForm.food_name.trim()) return toast.error('Nombre requerido')
     const payload: Record<string, unknown> = { food_name: foodForm.food_name, meal_type: foodForm.meal_type, logged_at: date }
     if (foodForm.grams) payload.grams = parseFloat(foodForm.grams)
     if (foodForm.calories) payload.calories = parseFloat(foodForm.calories)
@@ -65,7 +66,7 @@ export default function NutritionPage() {
     try {
       await nutritionApi.logFood(payload as any)
       setShowFood(false); setFoodForm(emptyFoodForm()); load(date)
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const delLog = async (id: number) => { await nutritionApi.deleteLog(id); load(date) }

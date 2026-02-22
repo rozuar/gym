@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { Input, Textarea, Select } from '../../components/ui/Input'
+import { toast } from 'sonner'
 
 type ProgramForm = { name: string; description: string; required_sessions: string; active: boolean }
 const emptyProgramForm = (): ProgramForm => ({ name: '', description: '', required_sessions: '4', active: true })
@@ -43,13 +44,13 @@ export default function AdminOnramp() {
   }
 
   const submit = async () => {
-    if (!form.name.trim()) return alert('Nombre requerido')
+    if (!form.name.trim()) return toast.error('Nombre requerido')
     const data = { name: form.name, description: form.description, required_sessions: Number(form.required_sessions), active: form.active }
     try {
       if (editId) await onramp.updateProgram(editId, data)
       else await onramp.createProgram(data)
       setShowForm(false); loadPrograms()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {
@@ -70,7 +71,7 @@ export default function AdminOnramp() {
       await onramp.enroll(Number(enrollUserId), selectedProgram.id)
       setEnrollUserId(''); setShowEnroll(false)
       loadEnrollments(selectedProgram.id)
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const updateSessions = async (e: OnrampEnrollment, sessions: number) => {

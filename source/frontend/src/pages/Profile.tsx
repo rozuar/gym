@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input, Select } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { toast } from 'sonner'
 
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('es-CL') }
 
@@ -39,7 +40,7 @@ export default function ProfilePage() {
     try {
       await users.updateMe({ name: form.name, phone: form.phone } as any)
       await refreshUser()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
     setSaving(false)
   }
 
@@ -48,19 +49,19 @@ export default function ProfilePage() {
     input.onchange = async () => {
       const f = input.files?.[0]; if (!f) return
       try { const url = await uploadFile(f); await users.updateMe({ avatar_url: url } as any); await refreshUser() }
-      catch (e: any) { alert(e.message) }
+      catch (e: any) { toast.error(e.message) }
     }
     input.click()
   }
 
   const handleFreeze = async () => {
-    if (!freezeUntil) return alert('Selecciona fecha')
+    if (!freezeUntil) return toast.error('Selecciona fecha')
     setFreezing(true)
     try {
       await payments.freeze(freezeUntil)
       await loadSub()
       setShowFreeze(false)
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
     setFreezing(false)
   }
 
@@ -69,7 +70,7 @@ export default function ProfilePage() {
     try {
       await payments.unfreeze()
       await loadSub()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   if (!user) return null

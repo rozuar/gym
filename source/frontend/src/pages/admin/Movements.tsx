@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { Input, Textarea, Select } from '../../components/ui/Input'
+import { toast } from 'sonner'
 
 const CATEGORIES = ['olympic', 'gymnastics', 'monostructural', 'strength', 'other']
 const CAT_LABELS: Record<string, string> = {
@@ -45,12 +46,12 @@ export default function AdminMovements() {
   }
 
   const submit = async () => {
-    if (!form.name.trim()) return alert('Nombre requerido')
+    if (!form.name.trim()) return toast.error('Nombre requerido')
     try {
       if (editId) await movementsApi.update(editId, form)
       else await movementsApi.create(form)
       setShowForm(false); load()
-    } catch (e: any) { alert(e.message) }
+    } catch (e: any) { toast.error(e.message) }
   }
 
   const del = async (id: number) => {
