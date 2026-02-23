@@ -1,6 +1,6 @@
 import type { AuthResponse, User, Plan, Subscription, Discipline, ClassItem, Schedule, Booking, BookingWithUser, Instructor, Routine, UserResult, FeedEvent, WaitlistEntry, LeaderboardEntry, Payment, DashboardStats, TVSchedule, DiscountCode, Badge, RetentionAlert, Challenge, ChallengeParticipant, Lead, BodyMeasurement, ResultComment, OnrampProgram, OnrampEnrollment, Movement, GymEvent, EventRegistration, Product, Sale, SaleItem, Tag, NutritionLog, WaterLog, NutritionSummary } from '../types'
 
-const BASE = '/api/v1'
+const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api/v1'
 
 let accessToken = localStorage.getItem('access_token') || ''
 let refreshToken = localStorage.getItem('refresh_token') || ''
